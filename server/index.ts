@@ -22,6 +22,35 @@ interface SearchResult {
 	[key: string]: unknown;
 }
 
+// Function to extract name from text using multiple patterns
+function extractNameFromText(text: string): string {
+	// Pattern 1: English letters (and dashes) followed by Japanese characters
+	// Examples: "P-SEC ゴール・D・ロジャー(パラレル)(スーパーパラレル)", "SEC モンキー・D・ルフィ"
+	const englishFirstPattern =
+		/[A-Za-z]+(?:-[A-Za-z]+)?\s+[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・！!]+(?:\([^)]*\))*/;
+	let match = text.match(englishFirstPattern);
+	if (match && match[0]) {
+		return match[0];
+	}
+
+	// Pattern 2: Dash followed by Japanese characters
+	// Example: "- ドン!!カード(ONE PIECE DAY'24)"
+	const dashFirstPattern = /-\s+[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・！!]+(?:\([^)]*\))*/;
+	match = text.match(dashFirstPattern);
+	if (match && match[0]) {
+		return match[0];
+	}
+
+	// Pattern 3: Japanese characters first (fallback)
+	const japaneseFirstPattern = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・！!]+(?:\([^)]*\))*/;
+	match = text.match(japaneseFirstPattern);
+	if (match && match[0]) {
+		return match[0];
+	}
+
+	return "";
+}
+
 // Function to scrape individual card page for detailed data
 async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> {
 	console.log(`\n🔍 Starting to scrape card page: ${cardLink}`);
@@ -182,26 +211,11 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 		// Fallback: pattern matching if specific element not found
 		if (!name) {
 			console.log(`Specific element not found, falling back to pattern matching...`);
-			const namePattern = /[A-Z]+(?:-[A-Z]+)?\s+[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・\s]+(?:\([^)]+\))*/;
-
-			// Search through all h3 elements
-			$("h3").each((i, el) => {
-				if (name) return false;
-				const text = $(el).text();
-				const match = text.match(namePattern);
-				if (match) {
-					const matchedText = match[0];
-					if (
-						/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(matchedText) &&
-						matchedText.length >= 5 &&
-						matchedText.length < 200
-					) {
-						name = matchedText;
-						console.log(`Found name in h3 element: ${name}`);
-						return false;
-					}
-				}
-			});
+			const fullBodyText = $("body").text();
+			name = extractNameFromText(fullBodyText);
+			if (name) {
+				console.log(`Found name via pattern matching: ${name}`);
+			}
 		}
 
 		// Set the name without any trimming or splitting
