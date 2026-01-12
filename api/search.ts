@@ -19,7 +19,8 @@ interface SearchResult {
 function extractNameFromText(text: string): string {
 	// Pattern 1: English letters (and dashes) followed by Japanese characters
 	// Examples: "P-SEC ゴール・D・ロジャー(パラレル)(スーパーパラレル)", "SEC モンキー・D・ルフィ"
-	const englishFirstPattern = /[A-Za-z]+(?:-[A-Za-z]+)?\s+[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・！!]+(?:\([^)]*\))*/;
+	const englishFirstPattern =
+		/[A-Za-z]+(?:-[A-Za-z]+)?\s+[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・！!]+(?:\([^)]*\))*/;
 	let match = text.match(englishFirstPattern);
 	if (match && match[0]) {
 		return match[0];
@@ -50,8 +51,20 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 		const response = await axios.get(cardLink, {
 			headers: {
 				"User-Agent":
-					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+				Accept:
+					"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+				"Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+				"Accept-Encoding": "gzip, deflate, br",
+				Referer: "https://yuyu-tei.jp/",
+				"Sec-Fetch-Dest": "document",
+				"Sec-Fetch-Mode": "navigate",
+				"Sec-Fetch-Site": "same-origin",
+				"Sec-Fetch-User": "?1",
+				"Upgrade-Insecure-Requests": "1",
+				"Cache-Control": "max-age=0",
 			},
+			timeout: 30000, // 30 second timeout
 		});
 
 		const html = response.data;
@@ -368,13 +381,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 		const url = `https://yuyu-tei.jp/sell/opc/s/search?search_word=${encodeURIComponent(searchWord)}`;
 		console.log(`Fetching search results from: ${url}`);
 
-		// Fetch the HTML page
-		const response = await axios.get(url, {
-			headers: {
-				"User-Agent":
-					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-			},
-		});
+		// Fetch the HTML page with browser-like headers to avoid 403 errors
+		let response;
+		try {
+			response = await axios.get(url, {
+				headers: {
+					"User-Agent":
+						"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+					Accept:
+						"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+					"Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+					"Accept-Encoding": "gzip, deflate, br",
+					Referer: "https://yuyu-tei.jp/",
+					"Sec-Fetch-Dest": "document",
+					"Sec-Fetch-Mode": "navigate",
+					"Sec-Fetch-Site": "same-origin",
+					"Sec-Fetch-User": "?1",
+					"Upgrade-Insecure-Requests": "1",
+					"Cache-Control": "max-age=0",
+					Connection: "keep-alive",
+				},
+				timeout: 30000, // 30 second timeout
+				validateStatus: (status) => status < 500, // Don't throw on 4xx errors
+			});
+		} catch (error) {
+			if (axios.isAxiosError(error) && error.response?.status === 403) {
+				throw new Error(
+					"The website is blocking automated requests. This may be due to IP restrictions or anti-bot measures. Please try again later or contact support."
+				);
+			}
+			throw error;
+		}
+
+		// Check if we got a 403 error
+		if (response.status === 403) {
+			throw new Error(
+				"The website returned a 403 Forbidden error. The site may be blocking requests from serverless functions. Please try again later."
+			);
+		}
 
 		const html = response.data;
 
@@ -592,19 +636,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 		console.error("Error in handler:", error);
 		const errorMessage = error instanceof Error ? error.message : "Unknown error";
 		const errorStack = error instanceof Error ? error.stack : undefined;
-		
+
 		console.error("Full error details:", {
 			message: errorMessage,
 			stack: errorStack,
-			error: String(error)
+			error: String(error),
 		});
-		
+
 		// Make sure we haven't already sent a response
 		if (!res.headersSent) {
 			return res.status(500).json({
 				error: "Failed to fetch data",
 				message: errorMessage,
-				...(process.env.NODE_ENV === "development" && { stack: errorStack })
+				...(process.env.NODE_ENV === "development" && { stack: errorStack }),
 			});
 		}
 	}
