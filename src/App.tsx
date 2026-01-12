@@ -181,15 +181,24 @@ function App() {
 			const rate = await getExchangeRate();
 			setExchangeRate(rate);
 
-			const response = await fetch(`/api/search?search_word=${encodeURIComponent(searchWord)}`);
-			const data: ApiResponse = await response.json();
+			// Try frontend scraping first (bypasses CORS if possible)
+			try {
+				const { searchCards } = await import("./utils/scraper");
+				const fetchedResults = await searchCards(searchWord);
+				setResults(fetchedResults);
+			} catch (frontendError) {
+				// Fallback to backend API if frontend scraping fails (CORS issue)
+				console.log("Frontend scraping failed, trying backend API:", frontendError);
+				const response = await fetch(`/api/search?search_word=${encodeURIComponent(searchWord)}`);
+				const data: ApiResponse = await response.json();
 
-			if (!response.ok) {
-				throw new Error(data.error || "Failed to fetch data");
+				if (!response.ok) {
+					throw new Error(data.error || "Failed to fetch data");
+				}
+
+				const fetchedResults = data.results || [];
+				setResults(fetchedResults);
 			}
-
-			const fetchedResults = data.results || [];
-			setResults(fetchedResults);
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : "An error occurred while searching";
 			setError(errorMessage);
