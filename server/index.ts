@@ -529,34 +529,68 @@ app.get("/api/search", async (req, res) => {
 		console.log(`After deduplication: ${uniqueResults.length} unique results`);
 
 		// Scrape individual card pages for detailed data
+		// Process in batches to avoid overwhelming the proxy service
 		console.log("=== SCRAPING INDIVIDUAL CARD PAGES ===");
-		const detailedResults = await Promise.all(
-			uniqueResults.map(async (result) => {
-				if (!result.link) return result;
+		const BATCH_SIZE = 5; // Process 5 cards at a time
+		const DELAY_BETWEEN_BATCHES = 1000; // 1 second delay between batches
+		const DELAY_BETWEEN_REQUESTS = 200; // 200ms delay between individual requests
 
-				const cardData = await scrapeCardPage(result.link);
+		const detailedResults: SearchResult[] = [];
 
-				// Merge scraped data with existing result (scraped data takes precedence)
-				const merged = {
-					...result,
-					...cardData,
-					// Keep original link
-					link: result.link,
-					// Keep original cardNumber if scraped one is not found
-					cardNumber: cardData.cardNumber || result.cardNumber,
-					// Explicitly ensure price is set from scraped data
-					price: cardData.price || result.price,
-				};
+		for (let i = 0; i < uniqueResults.length; i += BATCH_SIZE) {
+			const batch = uniqueResults.slice(i, i + BATCH_SIZE);
+			console.log(
+				`Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(uniqueResults.length / BATCH_SIZE)} (${
+					batch.length
+				} cards)`
+			);
 
-				console.log(`Merged result for ${result.link}:`, {
-					originalPrice: result.price,
-					scrapedPrice: cardData.price,
-					finalPrice: merged.price,
-				});
+			const batchResults = await Promise.all(
+				batch.map(async (result, index) => {
+					if (!result.link) return result;
 
-				return merged;
-			})
-		);
+					// Add delay between requests within a batch
+					if (index > 0) {
+						await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_REQUESTS));
+					}
+
+					try {
+						const cardData = await scrapeCardPage(result.link);
+
+						// Merge scraped data with existing result (scraped data takes precedence)
+						const merged = {
+							...result,
+							...cardData,
+							// Keep original link
+							link: result.link,
+							// Keep original cardNumber if scraped one is not found
+							cardNumber: cardData.cardNumber || result.cardNumber,
+							// Explicitly ensure price is set from scraped data
+							price: cardData.price || result.price,
+						};
+
+						console.log(`Merged result for ${result.link}:`, {
+							originalPrice: result.price,
+							scrapedPrice: cardData.price,
+							finalPrice: merged.price,
+						});
+
+						return merged;
+					} catch (error) {
+						console.error(`Error scraping card page ${result.link}:`, error);
+						// Return original result if scraping fails
+						return result;
+					}
+				})
+			);
+
+			detailedResults.push(...batchResults);
+
+			// Add delay between batches (except for the last batch)
+			if (i + BATCH_SIZE < uniqueResults.length) {
+				await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
+			}
+		}
 
 		console.log(`Scraped ${detailedResults.length} card pages`);
 		if (detailedResults.length > 0) {
