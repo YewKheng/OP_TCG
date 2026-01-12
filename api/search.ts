@@ -339,20 +339,25 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-	// Enable CORS
-	res.setHeader("Access-Control-Allow-Credentials", "true");
-	res.setHeader("Access-Control-Allow-Origin", "*");
-	res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-	res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-	if (req.method === "OPTIONS") {
-		res.status(200).end();
-		return;
-	}
-
-	console.log("\n🚀 === SEARCH REQUEST RECEIVED ===");
-	console.log("Query params:", req.query);
 	try {
+		// Enable CORS
+		res.setHeader("Access-Control-Allow-Credentials", "true");
+		res.setHeader("Access-Control-Allow-Origin", "*");
+		res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+		res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+		if (req.method === "OPTIONS") {
+			res.status(200).end();
+			return;
+		}
+
+		// Only allow GET requests
+		if (req.method !== "GET") {
+			return res.status(405).json({ error: "Method not allowed" });
+		}
+
+		console.log("\n🚀 === SEARCH REQUEST RECEIVED ===");
+		console.log("Query params:", req.query);
 		const searchWord = req.query.search_word as string;
 		console.log(`Search word: ${searchWord}`);
 
@@ -373,10 +378,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 		const html = response.data;
 
-		// Log the full HTML to console for inspection
-		console.log("=== FULL HTML FROM yuyu-tei.jp ===");
-		console.log(html);
-		console.log("=== END OF HTML ===");
+		// Log HTML length for debugging (not the full HTML to avoid log size issues)
+		console.log(`HTML received, length: ${html.length}`);
 
 		const $ = cheerio.load(html);
 
@@ -578,20 +581,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 		}
 		console.log("=== END SCRAPING ===");
 
-		res.json({
+		// Return response (without rawHtml to avoid size issues)
+		return res.json({
 			searchWord,
 			url,
 			count: detailedResults.length,
 			results: detailedResults,
-			rawHtml: html, // Return full HTML for inspection
-			htmlLength: html.length,
 		});
 	} catch (error) {
-		console.error("Error fetching data:", error);
+		console.error("Error in handler:", error);
 		const errorMessage = error instanceof Error ? error.message : "Unknown error";
-		res.status(500).json({
-			error: "Failed to fetch data",
+		const errorStack = error instanceof Error ? error.stack : undefined;
+		
+		console.error("Full error details:", {
 			message: errorMessage,
+			stack: errorStack,
+			error: String(error)
 		});
+		
+		// Make sure we haven't already sent a response
+		if (!res.headersSent) {
+			return res.status(500).json({
+				error: "Failed to fetch data",
+				message: errorMessage,
+				...(process.env.NODE_ENV === "development" && { stack: errorStack })
+			});
+		}
 	}
 }
