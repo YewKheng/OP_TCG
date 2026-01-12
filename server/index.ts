@@ -23,6 +23,7 @@ interface SearchResult {
 
 // Function to scrape individual card page for detailed data
 async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> {
+	console.log(`\n🔍 Starting to scrape card page: ${cardLink}`);
 	try {
 		const response = await axios.get(cardLink, {
 			headers: {
@@ -52,28 +53,127 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 			cardData.image = image.startsWith("http") ? image : `https://yuyu-tei.jp${image}`;
 		}
 
-		// Try to extract price
-		const price =
-			$('.price, [class*="price"], [class*="cost"], [class*="yen"]').first().text().trim() ||
-			$("body")
-				.text()
-				.match(/[\d,]+円/)?.[0] ||
-			$("body")
-				.text()
-				.match(/¥[\d,]+/)?.[0];
+		// Try to extract price - look for elements containing 円 (yen symbol)
+		console.log(`\n=== EXTRACTING PRICE for ${cardLink} ===`);
 
-		if (price) {
-			cardData.price = price;
+		// Get all text from the page first
+		const bodyText = $("body").text();
+		console.log("Body text length:", bodyText.length);
+
+		// Find all instances of prices with 円 (handle spaces: "2,480 円" or "2,480円")
+		const allPrices = bodyText.match(/[\d,]+\s*円/g) || [];
+		console.log("All prices found with 円:", allPrices);
+
+		// Filter to find valid product prices (>= 100 yen)
+		const validPrices = allPrices.filter((p) => {
+			const numStr = p.replace(/[^\d,]/g, "").replace(/,/g, "");
+			const num = parseInt(numStr);
+			return num >= 100;
+		});
+		console.log("Valid prices (>= 100 yen):", validPrices);
+
+		let price = "";
+
+		// First try specific price selectors
+		const priceElements = $('.price, [class*="price"], [class*="cost"], [class*="yen"]').filter((i, el) =>
+			$(el).text().includes("円")
+		);
+
+		if (priceElements.length > 0) {
+			const priceText = priceElements.first().text().trim();
+			const priceMatch = priceText.match(/[\d,]+\s*円/)?.[0];
+			if (priceMatch) {
+				const numStr = priceMatch.replace(/[^\d,]/g, "").replace(/,/g, "");
+				const num = parseInt(numStr);
+				if (num >= 100) {
+					price = priceMatch.replace(/\s+/g, ""); // Remove spaces: "2,480 円" -> "2,480円"
+					console.log(`Found price in price selector: ${price}`);
+				}
+			}
 		}
 
-		// Try to extract card name
-		const name =
-			$(".name, .title, h1, h2, [class*='name'], [class*='title']").first().text().trim() ||
+		// If not found, search all elements that contain 円
+		if (!price) {
+			const elementsWithYen = $("*").filter((i, el) => {
+				const text = $(el).text();
+				return text.includes("円") && /[\d,]+\s*円/.test(text);
+			});
+
+			console.log(`Found ${elementsWithYen.length} elements containing 円`);
+
+			// Find the first valid price (>= 100 yen)
+			for (let i = 0; i < elementsWithYen.length && !price; i++) {
+				const text = $(elementsWithYen[i]).text();
+				const priceMatch = text.match(/[\d,]+\s*円/)?.[0];
+				if (priceMatch) {
+					const numStr = priceMatch.replace(/[^\d,]/g, "").replace(/,/g, "");
+					const num = parseInt(numStr);
+					if (num >= 100) {
+						price = priceMatch.replace(/\s+/g, ""); // Remove spaces
+						console.log(`Found price in element ${i}: ${price}`);
+						break;
+					}
+				}
+			}
+		}
+
+		// If still not found, use the first valid price from body text
+		if (!price && validPrices.length > 0) {
+			price = validPrices[0].replace(/\s+/g, ""); // Remove spaces
+			console.log(`Using first valid price from body text: ${price}`);
+		}
+
+		// Clean up the price - extract just the number and 円 (no spaces)
+		if (price) {
+			const priceMatch = price.match(/[\d,]+\s*円/)?.[0];
+			if (priceMatch) {
+				cardData.price = priceMatch.replace(/\s+/g, ""); // Remove spaces: "2,480 円" -> "2,480円"
+				console.log(`✓ Final price set: ${cardData.price}`);
+			}
+		} else {
+			console.log(`✗ No price found`);
+			console.log("Body text sample (first 3000 chars):", bodyText.substring(0, 3000));
+		}
+
+		console.log(`=== END PRICE EXTRACTION ===\n`);
+
+		// Try to extract card name - look for purple banner or title section
+		// Based on the page structure, the name is in a purple banner/title bar like "P-SEC ゴール・D・ロジャー(パラレル)"
+		let name =
+			$('[class*="banner"], [class*="title-bar"], [class*="header"], [style*="purple"], [style*="background"]')
+				.filter((i, el) => {
+					const text = $(el).text().trim();
+					// Look for text that contains Japanese characters and card info
+					return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) && text.length > 5;
+				})
+				.first()
+				.text()
+				.trim() ||
+			$("h1, h2")
+				.filter((i, el) => {
+					const text = $(el).text().trim();
+					return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) && text.length > 5;
+				})
+				.first()
+				.text()
+				.trim() ||
+			$(".name, .title, [class*='name'], [class*='title']")
+				.filter((i, el) => {
+					const text = $(el).text().trim();
+					return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) && text.length > 5;
+				})
+				.first()
+				.text()
+				.trim() ||
 			$('meta[property="og:title"]').attr("content") ||
 			$("title").text().trim();
 
+		// Clean up the name - remove common page structure text
 		if (name) {
+			// Remove things like "| カード検索", "販売", etc.
+			name = name.split("|")[0].split("販売")[0].trim();
 			cardData.name = name;
+			console.log(`✓ Name extracted: ${cardData.name}`);
 		}
 
 		// Try to extract card number
@@ -106,14 +206,18 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 }
 
 app.get("/api/search", async (req, res) => {
+	console.log("\n🚀 === SEARCH REQUEST RECEIVED ===");
+	console.log("Query params:", req.query);
 	try {
 		const searchWord = req.query.search_word as string;
+		console.log(`Search word: ${searchWord}`);
 
 		if (!searchWord) {
 			return res.status(400).json({ error: "search_word parameter is required" });
 		}
 
 		const url = `https://yuyu-tei.jp/sell/opc/s/search?search_word=${encodeURIComponent(searchWord)}`;
+		console.log(`Fetching search results from: ${url}`);
 
 		// Fetch the HTML page
 		const response = await axios.get(url, {
@@ -265,14 +369,24 @@ app.get("/api/search", async (req, res) => {
 				const cardData = await scrapeCardPage(result.link);
 
 				// Merge scraped data with existing result (scraped data takes precedence)
-				return {
+				const merged = {
 					...result,
 					...cardData,
 					// Keep original link
 					link: result.link,
 					// Keep original cardNumber if scraped one is not found
 					cardNumber: cardData.cardNumber || result.cardNumber,
+					// Explicitly ensure price is set from scraped data
+					price: cardData.price || result.price,
 				};
+
+				console.log(`Merged result for ${result.link}:`, {
+					originalPrice: result.price,
+					scrapedPrice: cardData.price,
+					finalPrice: merged.price,
+				});
+
+				return merged;
 			})
 		);
 
