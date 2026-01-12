@@ -15,6 +15,87 @@ interface SearchResult {
 	[key: string]: unknown;
 }
 
+// Helper function to fetch URL through proxy or directly
+async function fetchWithProxy(url: string): Promise<string> {
+	const scraperApiKey = process.env.SCRAPERAPI_KEY;
+	const proxyUrl = process.env.PROXY_URL;
+
+	// Use ScraperAPI if API key is provided
+	if (scraperApiKey) {
+		const proxyEndpoint = `http://api.scraperapi.com?api_key=${scraperApiKey}&url=${encodeURIComponent(url)}`;
+		console.log(`Fetching through ScraperAPI proxy: ${url}`);
+		const response = await axios.get(proxyEndpoint, {
+			timeout: 30000,
+			headers: {
+				"User-Agent":
+					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+			},
+		});
+		return response.data;
+	}
+
+	// Use custom proxy URL if provided
+	if (proxyUrl) {
+		console.log(`Fetching through custom proxy: ${url}`);
+		const response = await axios.get(url, {
+			proxy: {
+				host: new URL(proxyUrl).hostname,
+				port: parseInt(new URL(proxyUrl).port) || 80,
+				protocol: new URL(proxyUrl).protocol.replace(":", ""),
+			},
+			timeout: 30000,
+			headers: {
+				"User-Agent":
+					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+				Accept:
+					"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+				"Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+				"Accept-Encoding": "gzip, deflate, br",
+				Referer: "https://yuyu-tei.jp/",
+				"Sec-Fetch-Dest": "document",
+				"Sec-Fetch-Mode": "navigate",
+				"Sec-Fetch-Site": "same-origin",
+				"Sec-Fetch-User": "?1",
+				"Upgrade-Insecure-Requests": "1",
+				"Cache-Control": "max-age=0",
+				Connection: "keep-alive",
+			},
+		});
+		return response.data;
+	}
+
+	// Fallback to direct request with browser-like headers
+	console.log(`Fetching directly (no proxy): ${url}`);
+	const response = await axios.get(url, {
+		headers: {
+			"User-Agent":
+				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+			Accept:
+				"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+			"Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+			"Accept-Encoding": "gzip, deflate, br",
+			Referer: "https://yuyu-tei.jp/",
+			"Sec-Fetch-Dest": "document",
+			"Sec-Fetch-Mode": "navigate",
+			"Sec-Fetch-Site": "same-origin",
+			"Sec-Fetch-User": "?1",
+			"Upgrade-Insecure-Requests": "1",
+			"Cache-Control": "max-age=0",
+			Connection: "keep-alive",
+		},
+		timeout: 30000,
+		validateStatus: (status) => status < 500,
+	});
+
+	if (response.status === 403) {
+		throw new Error(
+			"403 Forbidden: The website is blocking requests. Please configure SCRAPERAPI_KEY or PROXY_URL environment variable to use a proxy service."
+		);
+	}
+
+	return response.data;
+}
+
 // Function to extract name from text using multiple patterns
 function extractNameFromText(text: string): string {
 	// Pattern 1: English letters (and dashes) followed by Japanese characters
@@ -48,26 +129,8 @@ function extractNameFromText(text: string): string {
 async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> {
 	console.log(`\n🔍 Starting to scrape card page: ${cardLink}`);
 	try {
-		const response = await axios.get(cardLink, {
-			headers: {
-				"User-Agent":
-					"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-				Accept:
-					"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-				"Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
-				"Accept-Encoding": "gzip, deflate, br",
-				Referer: "https://yuyu-tei.jp/",
-				"Sec-Fetch-Dest": "document",
-				"Sec-Fetch-Mode": "navigate",
-				"Sec-Fetch-Site": "same-origin",
-				"Sec-Fetch-User": "?1",
-				"Upgrade-Insecure-Requests": "1",
-				"Cache-Control": "max-age=0",
-			},
-			timeout: 30000, // 30 second timeout
-		});
-
-		const html = response.data;
+		// Fetch the card page through proxy or directly
+		const html = await fetchWithProxy(cardLink);
 		const $ = cheerio.load(html);
 
 		const cardData: Partial<SearchResult> = {};
@@ -381,46 +444,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 		const url = `https://yuyu-tei.jp/sell/opc/s/search?search_word=${encodeURIComponent(searchWord)}`;
 		console.log(`Fetching search results from: ${url}`);
 
-		// Fetch the HTML page with browser-like headers to avoid 403 errors
-		let response;
-		try {
-			response = await axios.get(url, {
-				headers: {
-					"User-Agent":
-						"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-					Accept:
-						"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-					"Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
-					"Accept-Encoding": "gzip, deflate, br",
-					Referer: "https://yuyu-tei.jp/",
-					"Sec-Fetch-Dest": "document",
-					"Sec-Fetch-Mode": "navigate",
-					"Sec-Fetch-Site": "same-origin",
-					"Sec-Fetch-User": "?1",
-					"Upgrade-Insecure-Requests": "1",
-					"Cache-Control": "max-age=0",
-					Connection: "keep-alive",
-				},
-				timeout: 30000, // 30 second timeout
-				validateStatus: (status) => status < 500, // Don't throw on 4xx errors
-			});
-		} catch (error) {
-			if (axios.isAxiosError(error) && error.response?.status === 403) {
-				throw new Error(
-					"The website is blocking automated requests. This may be due to IP restrictions or anti-bot measures. Please try again later or contact support."
-				);
-			}
-			throw error;
-		}
-
-		// Check if we got a 403 error
-		if (response.status === 403) {
-			throw new Error(
-				"The website returned a 403 Forbidden error. The site may be blocking requests from serverless functions. Please try again later."
-			);
-		}
-
-		const html = response.data;
+		// Fetch the HTML page through proxy or directly
+		const html = await fetchWithProxy(url);
 
 		// Log HTML length for debugging (not the full HTML to avoid log size issues)
 		console.log(`HTML received, length: ${html.length}`);
