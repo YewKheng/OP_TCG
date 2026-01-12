@@ -15,6 +15,7 @@ interface SearchResult {
 	price?: string;
 	image?: string;
 	link?: string;
+	color?: string;
 	// Keep old fields for backward compatibility
 	title?: string;
 	condition?: string;
@@ -68,9 +69,9 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 		const validPrices = allPrices.filter((p) => {
 			const numStr = p.replace(/[^\d,]/g, "").replace(/,/g, "");
 			const num = parseInt(numStr);
-			return num >= 100;
+			return num >= 10;
 		});
-		console.log("Valid prices (>= 100 yen):", validPrices);
+		console.log("Valid prices (>= 10 yen):", validPrices);
 
 		let price = "";
 
@@ -85,7 +86,7 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 			if (priceMatch) {
 				const numStr = priceMatch.replace(/[^\d,]/g, "").replace(/,/g, "");
 				const num = parseInt(numStr);
-				if (num >= 100) {
+				if (num >= 10) {
 					price = priceMatch.replace(/\s+/g, ""); // Remove spaces: "2,480 円" -> "2,480円"
 					console.log(`Found price in price selector: ${price}`);
 				}
@@ -108,7 +109,7 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 				if (priceMatch) {
 					const numStr = priceMatch.replace(/[^\d,]/g, "").replace(/,/g, "");
 					const num = parseInt(numStr);
-					if (num >= 100) {
+					if (num >= 10) {
 						price = priceMatch.replace(/\s+/g, ""); // Remove spaces
 						console.log(`Found price in element ${i}: ${price}`);
 						break;
@@ -137,58 +138,183 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 
 		console.log(`=== END PRICE EXTRACTION ===\n`);
 
-		// Try to extract card name - look for purple banner or title section
-		// Based on the page structure, the name is in a purple banner/title bar like "P-SEC ゴール・D・ロジャー(パラレル)"
-		let name =
-			$('[class*="banner"], [class*="title-bar"], [class*="header"], [style*="purple"], [style*="background"]')
-				.filter((i, el) => {
-					const text = $(el).text().trim();
-					// Look for text that contains Japanese characters and card info
-					return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) && text.length > 5;
-				})
-				.first()
-				.text()
-				.trim() ||
-			$("h1, h2")
-				.filter((i, el) => {
-					const text = $(el).text().trim();
-					return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) && text.length > 5;
-				})
-				.first()
-				.text()
-				.trim() ||
-			$(".name, .title, [class*='name'], [class*='title']")
-				.filter((i, el) => {
-					const text = $(el).text().trim();
-					return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text) && text.length > 5;
-				})
-				.first()
-				.text()
-				.trim() ||
-			$('meta[property="og:title"]').attr("content") ||
-			$("title").text().trim();
+		// Try to extract card name from specific element structure
+		// The name is in an h3 element inside a div with id="power" and class="power mt-4"
+		console.log(`\n=== EXTRACTING NAME from #power h3 element ===`);
 
-		// Clean up the name - remove common page structure text
+		let name = "";
+
+		// First, try to find the exact element structure: div#power > h3
+		const powerDiv = $("#power.power");
+		if (powerDiv.length > 0) {
+			const h3Element = powerDiv.find("h3").first();
+			if (h3Element.length > 0) {
+				name = h3Element.text();
+				console.log(`Found name in #power h3: ${name}`);
+			}
+		}
+
+		// Fallback: try other variations of the selector
+		if (!name) {
+			// Try just id="power"
+			const powerById = $("#power");
+			if (powerById.length > 0) {
+				const h3Element = powerById.find("h3").first();
+				if (h3Element.length > 0) {
+					name = h3Element.text();
+					console.log(`Found name in #power (by ID only): ${name}`);
+				}
+			}
+		}
+
+		// Fallback: try class="power"
+		if (!name) {
+			const powerByClass = $(".power");
+			if (powerByClass.length > 0) {
+				const h3Element = powerByClass.find("h3").first();
+				if (h3Element.length > 0) {
+					name = h3Element.text();
+					console.log(`Found name in .power h3: ${name}`);
+				}
+			}
+		}
+
+		// Fallback: pattern matching if specific element not found
+		if (!name) {
+			console.log(`Specific element not found, falling back to pattern matching...`);
+			const namePattern = /[A-Z]+(?:-[A-Z]+)?\s+[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・\s]+(?:\([^)]+\))*/;
+
+			// Search through all h3 elements
+			$("h3").each((i, el) => {
+				if (name) return false;
+				const text = $(el).text();
+				const match = text.match(namePattern);
+				if (match) {
+					const matchedText = match[0];
+					if (
+						/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(matchedText) &&
+						matchedText.length >= 5 &&
+						matchedText.length < 200
+					) {
+						name = matchedText;
+						console.log(`Found name in h3 element: ${name}`);
+						return false;
+					}
+				}
+			});
+		}
+
+		// Set the name without any trimming or splitting
 		if (name) {
-			// Remove things like "| カード検索", "販売", etc.
-			name = name.split("|")[0].split("販売")[0].trim();
 			cardData.name = name;
 			console.log(`✓ Name extracted: ${cardData.name}`);
+		} else {
+			console.log(`✗ No name found`);
 		}
+
+		console.log(`=== END NAME EXTRACTION ===\n`);
 
 		// Try to extract card number
 		const cardNumber =
 			$('.code, .number, [class*="code"], [class*="number"]').first().text().trim() ||
 			$("body")
 				.text()
-				.match(/OP\d+-\d+/)?.[0] ||
+				.match(/(?:OP|ST|PRB|EB|P)\d+-\d+/)?.[0] || // Pattern like OP09-118, ST01-001, P01-001
 			$("body")
 				.text()
-				.match(/\d+-\d+/)?.[0];
+				.match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0] || // Pattern like P-101, OP-101
+			$("body")
+				.text()
+				.match(/\d+-\d+/)?.[0]; // Pattern like 09-118
 
 		if (cardNumber) {
 			cardData.cardNumber = cardNumber;
 		}
+
+		// Helper function to extract table values
+		const extractTableValue = (label: string, validationRegex?: RegExp): string => {
+			let value = "";
+
+			// Look for table rows (tr) or table cells (td) that contain the label
+			const labelElements = $("tr, td, th").filter((i, el) => {
+				const text = $(el).text().trim();
+				return text.includes(label) && text.length < 100;
+			});
+
+			// Try to extract value from these elements
+			labelElements.each((i, el) => {
+				if (value) return; // Already found
+				const text = $(el).text().trim();
+				// Look for pattern like "label: value" or "label value"
+				const valueMatch =
+					text.match(new RegExp(`${label}[：:]\\s*([^\\s\\n]+)`)) || text.match(new RegExp(`${label}\\s+([^\\s\\n]+)`));
+				if (valueMatch && valueMatch[1]) {
+					const extractedValue = valueMatch[1].trim();
+					if (!validationRegex || validationRegex.test(extractedValue)) {
+						value = extractedValue;
+					}
+				} else {
+					// Try to find the next cell/sibling that might contain the value
+					const $el = $(el);
+					const $nextCell = $el.next("td, th");
+					if ($nextCell.length > 0) {
+						const nextText = $nextCell.text().trim();
+						if (nextText && (!validationRegex || validationRegex.test(nextText))) {
+							value = nextText;
+						}
+					}
+				}
+			});
+
+			// Alternative: Look for table structure where first column is label and second is the value
+			if (!value) {
+				$("table tr, table td").each((i, el) => {
+					if (value) return;
+					const $el = $(el);
+					const text = $el.text().trim();
+					if (text === label || text.includes(`${label}：`) || text.includes(`${label}:`)) {
+						// Get the next cell or the text after label
+						const $next = $el.next("td, th");
+						if ($next.length > 0) {
+							const extractedValue = $next.text().trim();
+							if (extractedValue && (!validationRegex || validationRegex.test(extractedValue))) {
+								value = extractedValue;
+							}
+						}
+					}
+				});
+			}
+
+			// Fallback: Search entire body text for pattern
+			if (!value) {
+				const bodyText = $("body").text();
+				const valueMatch =
+					bodyText.match(new RegExp(`${label}[：:]\\s*([^\\s\\n]+)`)) ||
+					bodyText.match(new RegExp(`${label}\\s+([^\\s\\n]+)`));
+				if (valueMatch && valueMatch[1]) {
+					const potentialValue = valueMatch[1].trim();
+					if (!validationRegex || validationRegex.test(potentialValue)) {
+						value = potentialValue;
+					}
+				}
+			}
+
+			return value;
+		};
+
+		// Extract all table values
+		console.log(`\n=== EXTRACTING TABLE VALUES ===`);
+
+		// Extract color (色)
+		const color = extractTableValue("色", /^(赤|青|緑|黄|紫|黒|赤色|青色|緑色|黄色|紫色|黒色)$/);
+		if (color) {
+			cardData.color = color;
+			console.log(`✓ Color extracted: ${cardData.color}`);
+		} else {
+			console.log(`✗ No color found`);
+		}
+
+		console.log(`=== END TABLE EXTRACTION ===\n`);
 
 		// Log for debugging
 		console.log(`Scraped card page ${cardLink}:`, {
@@ -196,6 +322,7 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 			hasPrice: !!cardData.price,
 			hasName: !!cardData.name,
 			hasCardNumber: !!cardData.cardNumber,
+			hasColor: !!cardData.color,
 		});
 
 		return cardData;
@@ -275,7 +402,8 @@ app.get("/api/search", async (req, res) => {
 				// Try to find card number/code
 				const cardNumber =
 					$el.find('.code, .number, [class*="code"], [class*="number"]').first().text().trim() ||
-					$el.text().match(/OP\d+-\d+/)?.[0] || // Pattern like OP09-118
+					$el.text().match(/(?:OP|ST|PRB|EB|P)\d+-\d+/)?.[0] || // Pattern like OP09-118, ST01-001, P01-001
+					$el.text().match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0] || // Pattern like P-101, OP-101
 					$el.text().match(/\d+-\d+/)?.[0]; // Pattern like 09-118
 
 				// Try to find price
@@ -321,7 +449,10 @@ app.get("/api/search", async (req, res) => {
 					const name = $img.attr("alt") || $parent.find("a").first().text().trim();
 					const link = $parent.find("a").first().attr("href");
 					const price = $parent.text().match(/[\d,]+円/)?.[0];
-					const cardNumber = $parent.text().match(/OP\d+-\d+/)?.[0] || $parent.text().match(/\d+-\d+/)?.[0];
+					const cardNumber =
+						$parent.text().match(/(?:OP|ST|PRB|EB|P)\d+-\d+/)?.[0] || // Pattern like OP09-118, P01-001
+						$parent.text().match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0] || // Pattern like P-101, OP-101
+						$parent.text().match(/\d+-\d+/)?.[0]; // Pattern like 09-118
 
 					if (image || name) {
 						results.push({
@@ -337,11 +468,32 @@ app.get("/api/search", async (req, res) => {
 			});
 		}
 
-		// Filter to only include items with cardNumber and link that includes "opc/card"
-		const filteredResults = results.filter(
-			(result) =>
-				result.cardNumber && result.cardNumber.trim() !== "" && result.link && result.link.includes("opc/card")
-		);
+		// Filter to only include items with cardNumber and link that includes "opc/card" or "/promo"
+		console.log("\n=== FILTERING RESULTS ===");
+		console.log(`Total results before filtering: ${results.length}`);
+
+		const filteredResults = results.filter((result) => {
+			const hasCardNumber = result.cardNumber && result.cardNumber.trim() !== "";
+			const hasLink = result.link && result.link.trim() !== "";
+			const hasValidLink = hasLink && (result.link!.includes("opc/card") || result.link!.includes("/promo"));
+
+			if (!hasCardNumber) {
+				console.log(`❌ Filtered out (no cardNumber): "${result.name || "unnamed"}" - link: ${result.link || "none"}`);
+				return false;
+			}
+
+			if (!hasValidLink) {
+				console.log(
+					`❌ Filtered out (invalid link): "${result.name || "unnamed"}" - cardNumber: ${result.cardNumber} - link: ${
+						result.link || "none"
+					}`
+				);
+				return false;
+			}
+
+			console.log(`✓ Kept: "${result.name || "unnamed"}" - cardNumber: ${result.cardNumber} - link: ${result.link}`);
+			return true;
+		});
 
 		// Remove duplicates based on link (keep first occurrence)
 		const seenLinks = new Set<string>();
@@ -357,7 +509,9 @@ app.get("/api/search", async (req, res) => {
 		// Log parsed results for debugging
 		console.log("=== PARSED RESULTS ===");
 		console.log(`Found ${results.length} total results`);
-		console.log(`Filtered to ${filteredResults.length} results with cardNumber and link containing "opc/card"`);
+		console.log(
+			`Filtered to ${filteredResults.length} results with cardNumber and link containing "opc/card" or "/promo"`
+		);
 		console.log(`After deduplication: ${uniqueResults.length} unique results`);
 
 		// Scrape individual card pages for detailed data
@@ -418,7 +572,7 @@ app.get("/api/search", async (req, res) => {
 	} catch (error) {
 		console.error("Error fetching data:", error);
 		const errorMessage = error instanceof Error ? error.message : "Unknown error";
-		res.status(500).json({
+		res.status(100).json({
 			error: "Failed to fetch data",
 			message: errorMessage,
 		});

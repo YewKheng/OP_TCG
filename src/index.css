@@ -1,3 +1,103 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+	--animate-spin-slow: spin 20s linear infinite;
+}
+/* Google Translate Widget Styling - Make it functional but invisible */
+#google_translate_element {
+	position: fixed;
+	top: -1000px;
+	left: -1000px;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	overflow: hidden;
+	z-index: -1;
+}
+
+/* Allow the select to be accessible programmatically */
+#google_translate_element select.goog-te-combo,
+select.goog-te-combo {
+	position: fixed;
+	top: -1000px;
+	left: -1000px;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: auto !important; /* Allow programmatic interaction */
+	visibility: visible !important; /* Keep it accessible */
+}
+
+/* Hide Google Translate banner visually but keep in DOM for functionality */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame,
+.goog-te-banner,
+iframe[src*="te_bk.gif"] {
+	display: none !important;
+	visibility: hidden !important;
+	height: 0 !important;
+	width: 0 !important;
+	opacity: 0 !important;
+	position: absolute !important;
+	left: -9999px !important;
+	pointer-events: none !important;
+	z-index: -9999 !important;
+}
+
+/* Don't hide all translate iframes - some are needed for functionality */
+body[style*="translate.googleapis.com"] {
+	background-image: none !important;
+	background: none !important;
+}
+
+/* Remove background image from body */
+body {
+	top: 0px !important;
+	background-image: none !important;
+	background: none !important;
+}
+
+/* Only hide the banner iframe, not all translate iframes */
+iframe[src*="te_bk.gif"] {
+	display: none !important;
+	visibility: hidden !important;
+	height: 0 !important;
+	width: 0 !important;
+	opacity: 0 !important;
+	position: absolute !important;
+	left: -9999px !important;
+}
+
+/* Style the translate dropdown */
+.goog-te-gadget {
+	color: transparent !important;
+	font-size: 0 !important;
+}
+
+.goog-te-gadget .goog-te-combo {
+	margin: 0;
+	padding: 8px 12px;
+	border: 25px solid #d1d5db;
+	border-radius: 25ssspx;
+	background-color: white;
+	color: #374151;
+	font-size: 14px;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.goog-te-gadget .goog-te-combo:hover {
+	border-color: #6366f1;
+	background-color: #f9fafb;
+}
+
+.dark .goog-te-gadget .goog-te-combo {
+	background-color: #1f2937;
+	border-color: #4b5563;
+	color: #f3f4f6;
+}
+
+.dark .goog-te-gadget .goog-te-combo:hover {
+	border-color: #6366f1;
+	background-color: #374151;
+}

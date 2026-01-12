@@ -1,13 +1,145 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>optcg</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+	<head>
+		<meta charset="UTF-8" />
+		<link rel="icon" type="image/jpeg" href="/cincai.jpeg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Cincai OP Price Check</title>
+		<!-- Google Translate Script -->
+		<script type="text/javascript">
+			// Hide banner visually but keep it in DOM for translation to work
+			function hideBanners() {
+				// Hide banner elements with CSS instead of removing them
+				var selectors = [".goog-te-banner-frame", ".goog-te-banner", 'iframe[src*="te_bk.gif"]'];
+
+				selectors.forEach(function (selector) {
+					try {
+						var elements = document.querySelectorAll(selector);
+						elements.forEach(function (el) {
+							if (el instanceof HTMLElement) {
+								// Hide with CSS instead of removing
+								el.style.display = "none";
+								el.style.visibility = "hidden";
+								el.style.height = "0";
+								el.style.width = "0";
+								el.style.opacity = "0";
+								el.style.position = "absolute";
+								el.style.left = "-9999px";
+								el.style.pointerEvents = "none";
+							}
+						});
+					} catch (e) {}
+				});
+
+				// Remove background image from body
+				if (document.body && document.body.style) {
+					if (document.body.style.backgroundImage && document.body.style.backgroundImage.includes("translate")) {
+						document.body.style.backgroundImage = "none";
+					}
+					document.body.style.top = "0";
+				}
+			}
+
+			// Run immediately and continuously (but don't remove elements)
+			hideBanners();
+			setInterval(hideBanners, 100);
+
+			function googleTranslateElementInit() {
+				new google.translate.TranslateElement(
+					{
+						pageLanguage: "ja",
+						includedLanguages: "en,ja",
+						layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+						autoDisplay: false,
+					},
+					"google_translate_element"
+				);
+
+				// Hide banner after init (but don't remove it)
+				setTimeout(hideBanners, 100);
+				setTimeout(hideBanners, 300);
+				setTimeout(hideBanners, 500);
+			}
+
+			// MutationObserver to hide banners (but not remove them)
+			var observer = new MutationObserver(function (mutations) {
+				mutations.forEach(function (mutation) {
+					mutation.addedNodes.forEach(function (node) {
+						if (node.nodeType === 1) {
+							// Check all possible banner indicators
+							var isBanner = false;
+
+							if (node.classList) {
+								var classes = Array.from(node.classList);
+								isBanner = classes.some(function (c) {
+									return c.includes("goog-te-banner") || c.includes("VIpgJd") || c.includes("skiptranslate");
+								});
+							}
+
+							if (node.tagName === "IFRAME" && node.src) {
+								isBanner = node.src.includes("te_bk.gif");
+							}
+
+							if (node.tagName === "BODY" && node.style && node.style.backgroundImage) {
+								isBanner = node.style.backgroundImage.includes("translate");
+							}
+
+							// Hide banner but don't remove it
+							if (isBanner && node instanceof HTMLElement) {
+								node.style.display = "none";
+								node.style.visibility = "hidden";
+								node.style.height = "0";
+								node.style.width = "0";
+								node.style.opacity = "0";
+								node.style.position = "absolute";
+								node.style.left = "-9999px";
+								node.style.pointerEvents = "none";
+							}
+						}
+					});
+
+					// Also check attribute changes
+					if (mutation.type === "attributes" && mutation.target === document.body) {
+						if (mutation.attributeName === "style" || mutation.attributeName === "class") {
+							hideBanners();
+						}
+					}
+				});
+			});
+
+			// Start observing before page loads
+			if (document.body) {
+				observer.observe(document.body, {
+					childList: true,
+					subtree: true,
+					attributes: true,
+					attributeFilter: ["style", "class"],
+				});
+			} else {
+				document.addEventListener("DOMContentLoaded", function () {
+					observer.observe(document.body, {
+						childList: true,
+						subtree: true,
+						attributes: true,
+						attributeFilter: ["style", "class"],
+					});
+				});
+			}
+
+			// Also observe document
+			observer.observe(document.documentElement, {
+				childList: true,
+				subtree: true,
+				attributes: true,
+				attributeFilter: ["style", "class"],
+			});
+		</script>
+		<script
+			type="text/javascript"
+			src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script type="module" src="/src/main.tsx"></script>
+	</body>
 </html>
