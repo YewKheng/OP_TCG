@@ -5,10 +5,11 @@ This guide explains how to set up local scraping to avoid CORS issues and improv
 ## Overview
 
 Instead of scraping in real-time (which is slow and unreliable due to CORS and proxy limitations), we now:
+
 1. Scrape data locally using standalone scripts
 2. Store the data in a JSON file (`data/scraped-data.json`)
 3. Serve cached data through fast APIs
-4. Update the cache periodically via cron jobs
+4. Update the cache manually when needed
 
 ## Why This Approach?
 
@@ -22,11 +23,13 @@ Instead of scraping in real-time (which is slow and unreliable due to CORS and p
 ### 1. Manual Scraping
 
 Scrape a single search term:
+
 ```bash
 npm run scrape 09-118
 ```
 
 Scrape multiple search terms:
+
 ```bash
 npm run scrape:all
 ```
@@ -47,129 +50,35 @@ curl http://localhost:3001/api/cached/09-118
 
 The frontend automatically uses cached data when available. If no cached data exists, it falls back to real-time scraping.
 
-## Setting Up Cron Jobs
+## Manual Updates
 
-### Option 1: Using cron (Linux/macOS)
+Run scraping manually when you need to update the data:
 
-1. Open your crontab:
 ```bash
-crontab -e
-```
+# Scrape all search terms
+npm run scrape:all
 
-2. Add a cron job to scrape daily at 2 AM:
-```bash
-# Scrape daily at 2 AM
-0 2 * * * cd /path/to/OPTCG && npm run scrape 09-118 >> /path/to/OPTCG/logs/scrape.log 2>&1
-```
-
-3. For multiple search terms, create a script:
-```bash
-# Create scripts/daily-scrape.sh
-#!/bin/bash
-cd /path/to/OPTCG
+# Or scrape specific terms
 npm run scrape OP01
 npm run scrape OP02
-npm run scrape OP03
-npm run scrape OP04
-npm run scrape OP05
-npm run scrape OP06
-npm run scrape OP07
-npm run scrape OP08
-npm run scrape OP09
-npm run scrape OP10
-npm run scrape OP11
-npm run scrape OP12
-npm run scrape OP13
-npm run scrape OP14
-npm run scrape OP15
-npm run scrape OP16
-
-npm run scrape EB01
-npm run scrape EB02
-npm run scrape EB03
-npm run scrape EB04
-
-npm run scrape ST01
-
-# Add more as needed
 ```
 
-Make it executable:
+After scraping, commit and push the updated data:
+
 ```bash
-chmod +x scripts/daily-scrape.sh
-```
-
-Then add to crontab:
-```bash
-0 2 * * * /path/to/OPTCG/scripts/daily-scrape.sh >> /path/to/OPTCG/logs/scrape.log 2>&1
-```
-
-### Option 2: Using node-cron (Node.js)
-
-Create a file `scripts/cron-scraper.ts`:
-
-```typescript
-import cron from "node-cron";
-import { execSync } from "child_process";
-
-// Run daily at 2 AM
-cron.schedule("0 2 * * *", () => {
-  console.log("Running daily scrape...");
-  try {
-    execSync("npm run scrape 09-118", { stdio: "inherit" });
-    execSync("npm run scrape 09-119", { stdio: "inherit" });
-    // Add more as needed
-  } catch (error) {
-    console.error("Scrape failed:", error);
-  }
-});
-```
-
-Run it:
-```bash
-tsx scripts/cron-scraper.ts
-```
-
-### Option 3: Using GitHub Actions (for cloud-based scraping)
-
-Create `.github/workflows/scrape.yml`:
-
-```yaml
-name: Daily Scrape
-
-on:
-  schedule:
-    - cron: '0 2 * * *'  # Daily at 2 AM UTC
-  workflow_dispatch:  # Allow manual trigger
-
-jobs:
-  scrape:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - run: npm install
-      - run: npm run scrape 09-118
-      - run: npm run scrape 09-119
-      # Add more as needed
-      - name: Commit and push data
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add data/
-          git commit -m "Update scraped data" || exit 0
-          git push
+git add data/scraped-data.json
+git commit -m "Update scraped data"
+git push
 ```
 
 ## Important Notes
 
-### CORS and Cron Jobs
+### CORS and Server-Side Scraping
 
-**CORS (Cross-Origin Resource Sharing) is a browser security feature.** When you run scraping scripts on a server (via cron jobs, Node.js scripts, or GitHub Actions), you're making server-to-server requests, which **do not encounter CORS restrictions**.
+**CORS (Cross-Origin Resource Sharing) is a browser security feature.** When you run scraping scripts locally (via command line), you're making server-to-server requests, which **do not encounter CORS restrictions**.
 
 However, you may still encounter:
+
 - **Rate limiting**: The website may limit how many requests you can make
 - **IP blocking**: If you make too many requests, your IP might be temporarily blocked
 - **403 Forbidden**: Some websites block automated requests
@@ -199,6 +108,7 @@ To add more search terms to scrape:
 ### "403 Forbidden" Error
 
 If you get 403 errors:
+
 - Wait a few hours and try again
 - Use a VPN or proxy
 - Reduce scraping frequency
@@ -206,24 +116,25 @@ If you get 403 errors:
 
 ### "No cached data found"
 
-This means the search term hasn't been scraped yet. Either:
-- Run `npm run scrape <term>` manually
-- Wait for the cron job to run
-- The API will fall back to real-time scraping (slower)
+This means the search term hasn't been scraped yet. Run:
+
+```bash
+npm run scrape <term>
+```
 
 ### Data Not Updating
 
-- Check if cron job is running: `crontab -l`
-- Check logs: `tail -f logs/scrape.log`
 - Verify the script works manually: `npm run scrape <term>`
+- Check if the data file was saved: `ls -lh data/scraped-data.json`
+- Make sure to commit and push after scraping
 
 ## Migration from Old System
 
 The old system used ScraperAPI proxy which was slow and unreliable. The new system:
+
 - ✅ Uses cached data (instant responses)
 - ✅ Falls back to scraping if cache is empty
-- ✅ Can be updated via cron jobs
+- ✅ Manual updates when needed
 - ✅ No CORS issues for server-side scraping
 
 Your existing frontend code will automatically use cached data when available, so no frontend changes are needed (though we've optimized it to prefer cached data).
-

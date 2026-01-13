@@ -13,13 +13,13 @@ const SCRAPE_SCRIPT = path.join(process.cwd(), "scripts", "scrape.ts");
 const COMMON_SEARCH_TERMS: string[] = [];
 
 // OP01 to OP20
-for (let i = 1; i <= 20; i++) {
+for (let i = 1; i <= 15; i++) {
 	const num = i.toString().padStart(2, "0");
 	COMMON_SEARCH_TERMS.push(`OP${num}`);
 }
 
-// EB01 to EB10
-for (let i = 1; i <= 10; i++) {
+// EB01 to EB04
+for (let i = 1; i <= 4; i++) {
 	const num = i.toString().padStart(2, "0");
 	COMMON_SEARCH_TERMS.push(`EB${num}`);
 }
@@ -37,8 +37,8 @@ async function scrapeAll() {
 	console.log("🚀 Starting batch scrape...\n");
 	console.log(`Total search terms to scrape: ${COMMON_SEARCH_TERMS.length}`);
 	console.log(`Breakdown:`);
-	console.log(`  - OP01 to OP20: 20 terms`);
-	console.log(`  - EB01 to EB10: 10 terms`);
+	console.log(`  - OP01 to OP15: 15 terms`);
+	console.log(`  - EB01 to EB04: 4 terms`);
 	console.log(`  - ST01 to ST30: 30 terms`);
 	console.log(`  - P-: 1 term (all P-series cards)`);
 	console.log(`\nThis will take a while. Each term takes ~2-10 minutes depending on card count.\n`);

@@ -1,16 +1,14 @@
 # Quick Start - Local Scraping Setup
 
-## Answer to Your Question
+## Important Notes
 
-**Q: Will cron jobs encounter the same blocking issue?**
-
-**A: No!** CORS (Cross-Origin Resource Sharing) is a **browser-only security feature**. When you run scraping scripts on a server (via cron jobs, Node.js, or command line), you're making server-to-server HTTP requests, which **do not have CORS restrictions**.
+**CORS (Cross-Origin Resource Sharing) is a browser-only security feature.** When you run scraping scripts locally (via command line), you're making server-to-server HTTP requests, which **do not have CORS restrictions**.
 
 However, you may still encounter:
 
 - Rate limiting (too many requests)
 - IP blocking (if you scrape too aggressively)
-- 403 Forbidden (if the website detects automation)
+- 403 Forbidden (if the website detects automation or blocks certain IPs)
 
 The scraping script includes delays to minimize these issues.
 
@@ -50,23 +48,20 @@ curl http://localhost:3001/api/cached/09-118
 curl http://localhost:3001/api/search?search_word=09-118
 ```
 
-### 5. Set Up Daily Cron Job
+### 5. Update Data Manually
 
-**On macOS/Linux:**
+When you need to update the scraped data, run:
 
 ```bash
-# Edit crontab
-crontab -e
-
-# Add this line (runs daily at 2 AM)
-0 2 * * * cd /Users/Kheng/Documents/OPTCG && npm run scrape 09-118 >> /Users/Kheng/Documents/OPTCG/logs/scrape.log 2>&1
+npm run scrape:all
 ```
 
-**On Windows:**
-Use Task Scheduler to run:
+Then commit and push:
 
-```cmd
-cd C:\path\to\OPTCG && npm run scrape 09-118
+```bash
+git add data/scraped-data.json
+git commit -m "Update scraped data"
+git push
 ```
 
 ## How It Works
@@ -86,5 +81,6 @@ cd C:\path\to\OPTCG && npm run scrape 09-118
 ## Next Steps
 
 1. Add more search terms to `scripts/scrape-all.ts`
-2. Set up cron job for automatic daily updates
+2. Run `npm run scrape:all` periodically to update data
 3. See `SCRAPING_SETUP.md` for detailed documentation
+4. See `MANUAL_SCRAPE_GUIDE.md` for manual scraping instructions

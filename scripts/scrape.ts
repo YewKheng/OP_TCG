@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Standalone scraping script for yuyu-tei.jp
- * Can be run manually or via cron job
+ * Run manually to update cached data
  *
  * Usage:
  *   npm run scrape <search_term>
@@ -86,11 +86,11 @@ function extractNameFromText(text: string): string {
 // Fetch URL directly (no proxy needed for server-side scraping)
 async function fetchUrl(url: string): Promise<string> {
 	console.log(`Fetching: ${url}`);
-	
+
 	// Add random delay to avoid rate limiting
 	const delay = Math.random() * 1000 + 500; // 500-1500ms
 	await new Promise((resolve) => setTimeout(resolve, delay));
-	
+
 	const response = await axios.get(url, {
 		headers: {
 			"User-Agent":
@@ -113,7 +113,9 @@ async function fetchUrl(url: string): Promise<string> {
 	});
 
 	if (response.status === 403) {
-		throw new Error("403 Forbidden: The website is blocking requests. GitHub Actions IP addresses may be blocked. Consider running locally or using a different hosting service.");
+		throw new Error(
+			"403 Forbidden: The website is blocking requests. GitHub Actions IP addresses may be blocked. Consider running locally or using a different hosting service."
+		);
 	}
 
 	return response.data;
