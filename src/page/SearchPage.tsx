@@ -299,7 +299,7 @@ function SearchPage() {
 	});
 
 	return (
-		<div className="min-h-screen p-4 bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+		<div className="min-h-screen p-4">
 			<div className="max-w-6xl mx-auto">
 				{/* Translate Button - Browser Style */}
 

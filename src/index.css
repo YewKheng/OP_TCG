@@ -10,7 +10,7 @@
 }
 
 body {
-	background-color: var(--color-blue);
+	background: linear-gradient(to bottom right, #111827, #1f2937);
 }
 
 @theme {
@@ -67,6 +67,8 @@ body[style*="translate.googleapis.com"] {
 body {
 	top: 0px !important;
 	background-image: none !important;
+	/* Keep gradient background */
+	background: linear-gradient(to bottom right, #111827, #1f2937) !important;
 }
 
 /* Only hide the banner iframe, not all translate iframes */
