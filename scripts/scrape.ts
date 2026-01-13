@@ -86,20 +86,34 @@ function extractNameFromText(text: string): string {
 // Fetch URL directly (no proxy needed for server-side scraping)
 async function fetchUrl(url: string): Promise<string> {
 	console.log(`Fetching: ${url}`);
+	
+	// Add random delay to avoid rate limiting
+	const delay = Math.random() * 1000 + 500; // 500-1500ms
+	await new Promise((resolve) => setTimeout(resolve, delay));
+	
 	const response = await axios.get(url, {
 		headers: {
 			"User-Agent":
 				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 			Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
 			"Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+			"Accept-Encoding": "gzip, deflate, br",
 			Referer: "https://yuyu-tei.jp/",
+			"Cache-Control": "no-cache",
+			Pragma: "no-cache",
+			"Sec-Fetch-Dest": "document",
+			"Sec-Fetch-Mode": "navigate",
+			"Sec-Fetch-Site": "same-origin",
+			"Sec-Fetch-User": "?1",
+			"Upgrade-Insecure-Requests": "1",
 		},
 		timeout: 30000,
 		validateStatus: (status) => status < 500,
+		maxRedirects: 5,
 	});
 
 	if (response.status === 403) {
-		throw new Error("403 Forbidden: The website is blocking requests. Try again later or use a VPN.");
+		throw new Error("403 Forbidden: The website is blocking requests. GitHub Actions IP addresses may be blocked. Consider running locally or using a different hosting service.");
 	}
 
 	return response.data;

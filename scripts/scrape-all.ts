@@ -65,9 +65,11 @@ async function scrapeAll() {
 			console.log(`${progress} ✅ Completed: ${searchTerm}`);
 			successCount++;
 
-			// Add delay between searches to avoid rate limiting (except for the last one)
+			// Add longer delay between searches to avoid rate limiting (except for the last one)
 			if (i < COMMON_SEARCH_TERMS.length - 1) {
-				await new Promise((resolve) => setTimeout(resolve, 2000));
+				const delay = 5000 + Math.random() * 3000; // 5-8 seconds between searches
+				console.log(`⏳ Waiting ${Math.round(delay / 1000)}s before next scrape...`);
+				await new Promise((resolve) => setTimeout(resolve, delay));
 			}
 		} catch (error: unknown) {
 			console.error(`\n${progress} ❌ Failed to scrape ${searchTerm}`);
