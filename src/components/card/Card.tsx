@@ -106,7 +106,7 @@ const Card: React.FC<CardProps> = ({ result, exchangeRate, onImageClick, isLoadi
 				<img
 					src={imageUrl}
 					alt={result.name || "Card image"}
-					className="object-contain w-1/2 mb-3 rounded-md h-1/2 cursor-pointer hover:opacity-90 transition-opacity"
+					className="mb-3 rounded-md cursor-pointer hover:opacity-90 transition-opacity w-[75%] h-auto"
 					onClick={() => onImageClick(imageUrl)}
 					onError={(e) => {
 						(e.target as HTMLImageElement).style.display = "none";

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Languages } from "lucide-react";
-import Card from "./components/card/Card";
+import Card from "../components/card/Card";
 
 interface SearchResult {
 	name?: string;
@@ -38,7 +38,7 @@ interface ApiResponse {
 	lastScraped?: string;
 }
 
-function App() {
+function SearchPage() {
 	const [searchWord, setSearchWord] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [results, setResults] = useState<SearchResult[]>([]);
@@ -236,10 +236,18 @@ function App() {
 		// Trim leading/trailing whitespace first
 		const trimmedName = name.trim();
 
-		// Match English letters (and dashes) at the start, before Japanese characters or space
-		// Examples: "P-SEC", "P-SR", "SEC", "SR", "C", "R", "P-R", etc.
+		// Match English letters and dashes at the start, before Japanese characters or space
+		// The pattern explicitly allows dashes within the prefix (e.g., "P-R", "P-SEC", "P-SR")
+		// Examples: "P-SEC", "P-SR", "SEC", "SR", "C", "R", "P-R", "P-L", etc.
 		// Also handles names with leading spaces like "  P-SEC モンキー・D・ルフィ"
-		const prefixMatch = trimmedName.match(/^([A-Za-z-]+)(?=\s|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/);
+		// First try to match patterns with dashes (P-R, P-L, P-SEC, P-SR, etc.)
+		// This ensures "P-R" is captured as "P-R" not "PR"
+		let prefixMatch = trimmedName.match(/^([A-Za-z]+(?:-[A-Za-z]+)+)(?=\s|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/);
+		if (prefixMatch && prefixMatch[1]) {
+			return prefixMatch[1];
+		}
+		// If no dash pattern, match simple letter prefix (SR, SEC, C, R, etc.)
+		prefixMatch = trimmedName.match(/^([A-Za-z]+)(?=\s|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/);
 		if (prefixMatch && prefixMatch[1]) {
 			return prefixMatch[1];
 		}
@@ -361,7 +369,7 @@ function App() {
 							type="submit"
 							disabled={loading}
 							className="w-full px-6 py-3 font-semibold text-white transition-colors duration-200 bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto sm:whitespace-nowrap">
-							{loading ? "Searching..." : "Search"}
+							{"Search"}
 						</button>
 					</form>
 
@@ -417,7 +425,7 @@ function App() {
 				)}
 
 				{loading && (
-					<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+					<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
 						{Array.from({ length: 6 }).map((_, index) => (
 							<Card key={index} isLoading={true} exchangeRate={exchangeRate} onImageClick={() => {}} />
 						))}
@@ -436,7 +444,7 @@ function App() {
 									</p>
 								</div>
 								{/* Group Cards */}
-								<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+								<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
 									{groupResults.map((result, index) => (
 										<Card
 											key={`${prefix}-${index}`}
@@ -484,4 +492,4 @@ function App() {
 	);
 }
 
-export default App;
+export default SearchPage;

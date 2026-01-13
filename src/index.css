@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+:root {
+	--color-blue: #5da9e9;
+	--color-teal: #6ed3b2;
+	--color-yellow: #ffd84d;
+	--color-red: #ff8a7a;
+	--color-black: #333333;
+	--color-grey: #d9d9d9;
+}
+
+body {
+	background-color: var(--color-blue);
+}
+
 @theme {
 	--animate-spin-slow: spin 20s linear infinite;
 }
@@ -54,7 +67,6 @@ body[style*="translate.googleapis.com"] {
 body {
 	top: 0px !important;
 	background-image: none !important;
-	background: none !important;
 }
 
 /* Only hide the banner iframe, not all translate iframes */
