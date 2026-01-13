@@ -272,7 +272,7 @@ function App() {
 			<div className="max-w-6xl mx-auto">
 				{/* Translate Button - Browser Style */}
 
-				<div className="flex flex-col w-full gap-4 mb-8 sm:flex-row sm:items-center">
+				<div className="flex flex-col justify-end w-full gap-4 mb-8 sm:flex-row sm:items-center">
 					{/* Mobile: Search heading and Translate button on same row */}
 					<div className="flex items-center justify-between w-full gap-2 sm:hidden">
 						<h3 className="text-xl font-bold text-white dark:text-gray-100">Search</h3>
@@ -300,7 +300,9 @@ function App() {
 						</div>
 					</div>
 
-					<form onSubmit={handleSearch} className="flex flex-col w-full gap-3 sm:flex-row sm:items-center sm:flex-1">
+					<form
+						onSubmit={handleSearch}
+						className="flex flex-col justify-center w-full gap-3 sm:flex-row sm:items-center sm:flex-1">
 						<h3 className="hidden text-xl font-bold text-white dark:text-gray-100 sm:block sm:text-2xl sm:whitespace-nowrap">
 							Search
 						</h3>
