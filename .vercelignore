@@ -1,0 +1,10 @@
+# Vercel ignore file
+# Don't exclude data folder - we need it for the API
+
+node_modules/
+.vite
+dist/
+build/
+*.log
+.DS_Store
+

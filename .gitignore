@@ -89,4 +89,4 @@ server/temp/
 *.pid.lock
 
 # Scraped data (contains large JSON files)
-data/
+# data/ - Removed to allow committing data for Vercel deployment
