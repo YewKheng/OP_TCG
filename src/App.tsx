@@ -47,9 +47,11 @@ function App() {
 	const [lastScraped, setLastScraped] = useState<string | null>(null);
 	const [modalImage, setModalImage] = useState<string | null>(null);
 	const [showTranslateDropdown, setShowTranslateDropdown] = useState(false);
+	const [showTranslateDropdownMobile, setShowTranslateDropdownMobile] = useState(false);
 	const translateDropdownRef = useRef<HTMLDivElement>(null);
+	const translateDropdownRefMobile = useRef<HTMLDivElement>(null);
 
-	// Close dropdown when clicking outside
+	// Close dropdown when clicking outside (desktop)
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
 			if (translateDropdownRef.current && !translateDropdownRef.current.contains(event.target as Node)) {
@@ -65,6 +67,23 @@ function App() {
 			document.removeEventListener("mousedown", handleClickOutside);
 		};
 	}, [showTranslateDropdown]);
+
+	// Close dropdown when clicking outside (mobile)
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (translateDropdownRefMobile.current && !translateDropdownRefMobile.current.contains(event.target as Node)) {
+				setShowTranslateDropdownMobile(false);
+			}
+		};
+
+		if (showTranslateDropdownMobile) {
+			document.addEventListener("mousedown", handleClickOutside);
+		}
+
+		return () => {
+			document.removeEventListener("mousedown", handleClickOutside);
+		};
+	}, [showTranslateDropdownMobile]);
 
 	// Hide Google Translate banner visually (but keep in DOM for translation to work)
 	useEffect(() => {
@@ -125,6 +144,7 @@ function App() {
 	const triggerTranslate = (targetLang: string) => {
 		console.log("Triggering translation to:", targetLang);
 		setShowTranslateDropdown(false);
+		setShowTranslateDropdownMobile(false);
 
 		// Set the translation cookie
 		const cookieValue = `/ja/${targetLang}`;
@@ -286,14 +306,14 @@ function App() {
 									{new Date(lastScraped).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
 								</span>
 							)}
-							<div className="relative notranslate" ref={translateDropdownRef}>
+							<div className="relative notranslate" ref={translateDropdownRefMobile}>
 								<button
-									onClick={() => setShowTranslateDropdown(!showTranslateDropdown)}
+									onClick={() => setShowTranslateDropdownMobile(!showTranslateDropdownMobile)}
 									className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 notranslate">
 									<Languages className="w-4 h-4" />
 									<span className="notranslate">Translate</span>
 								</button>
-								{showTranslateDropdown && (
+								{showTranslateDropdownMobile && (
 									<div className="absolute right-0 z-50 w-48 mt-2 bg-white border border-gray-200 rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700 notranslate">
 										<button
 											onClick={() => triggerTranslate("ja")}
@@ -308,6 +328,18 @@ function App() {
 									</div>
 								)}
 							</div>
+							{/* Google Translate Widget (positioned off-screen but functional) */}
+							<div
+								id="google_translate_element_mobile"
+								style={{
+									position: "fixed",
+									top: "-1000px",
+									left: "-1000px",
+									width: "1px",
+									height: "1px",
+									opacity: 0,
+									zIndex: -1,
+								}}></div>
 						</div>
 					</div>
 

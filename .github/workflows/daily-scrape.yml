@@ -1,0 +1,44 @@
+name: Daily Scrape
+
+on:
+  schedule:
+    # Runs daily at 6 AM Malaysia Time (MYT, UTC+8)
+    # 6 AM MYT = 22:00 UTC previous day (10 PM UTC)
+    # To adjust for other timezones:
+    # - 3 AM JST (Japan) = 18:00 UTC previous day → use: '0 18 * * *'
+    # - 3 AM EST (US East) = 8:00 UTC → use: '0 8 * * *'
+    # - 3 AM PST (US West) = 11:00 UTC → use: '0 11 * * *'
+    - cron: '0 22 * * *'  # 6 AM MYT = 10 PM UTC previous day
+  workflow_dispatch: # Allow manual trigger from GitHub Actions UI
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180 # Allow up to 3 hours for scraping all terms
+    permissions:
+      contents: write # Required to push changes
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run scrape
+        run: npm run scrape:all
+        continue-on-error: true # Continue even if some searches fail
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/scraped-data.json
+          git commit -m "Auto-update scraped data [skip ci]" || exit 0
+          git push
