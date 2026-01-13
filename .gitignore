@@ -87,3 +87,6 @@ server/temp/
 *.pid
 *.seed
 *.pid.lock
+
+# Scraped data (contains large JSON files)
+data/

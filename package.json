@@ -8,7 +8,9 @@
 		"dev:server": "tsx watch server/index.ts",
 		"build": "tsc -b && vite build",
 		"lint": "eslint .",
-		"preview": "vite preview"
+		"preview": "vite preview",
+		"scrape": "tsx scripts/scrape.ts",
+		"scrape:all": "tsx scripts/scrape-all.ts"
 	},
 	"dependencies": {
 		"@vercel/node": "^3.0.7",

@@ -34,6 +34,8 @@ interface ApiResponse {
 	message?: string;
 	rawHtml?: string;
 	htmlLength?: number;
+	cached?: boolean;
+	lastScraped?: string;
 }
 
 function App() {
@@ -162,8 +164,8 @@ function App() {
 				const parsed = JSON.parse(savedResults);
 				setResults(parsed);
 				localStorage.removeItem("searchResults");
-			} catch (e) {
-				console.error("Failed to parse saved results");
+			} catch (error) {
+				console.error("Failed to parse saved results:", error);
 			}
 		}
 	}, []);
@@ -181,23 +183,19 @@ function App() {
 			const rate = await getExchangeRate();
 			setExchangeRate(rate);
 
-			// Try frontend scraping first (bypasses CORS if possible)
-			try {
-				const { searchCards } = await import("./utils/scraper");
-				const fetchedResults = await searchCards(searchWord);
-				setResults(fetchedResults);
-			} catch (frontendError) {
-				// Fallback to backend API if frontend scraping fails (CORS issue)
-				console.log("Frontend scraping failed, trying backend API:", frontendError);
-				const response = await fetch(`/api/search?search_word=${encodeURIComponent(searchWord)}`);
-				const data: ApiResponse = await response.json();
+			// Fetch from cached data API (only cached data is available)
+			const response = await fetch(`/api/search?search_word=${encodeURIComponent(searchWord)}`);
+			const data: ApiResponse = await response.json();
 
-				if (!response.ok) {
-					throw new Error(data.error || "Failed to fetch data");
-				}
+			if (!response.ok) {
+				throw new Error(data.error || data.message || "Failed to fetch data");
+			}
 
-				const fetchedResults = data.results || [];
-				setResults(fetchedResults);
+			if (data.results && data.results.length > 0) {
+				console.log(`✅ Using cached data`);
+				setResults(data.results);
+			} else {
+				throw new Error("No results found in cached data");
 			}
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : "An error occurred while searching";
@@ -276,43 +274,43 @@ function App() {
 			<div className="max-w-6xl mx-auto">
 				{/* Translate Button - Browser Style */}
 
-				<div className="flex flex-col sm:flex-row items-center w-full h-full mb-8 gap-4 ">
-					<form onSubmit={handleSearch} className="flex items-center justify-center gap-4 w-full h-full">
-						<h3 className="text-2xl font-bold text-white dark:text-gray-100">Search</h3>
+				<div className="flex flex-col w-full gap-4 mb-8 sm:flex-row sm:items-center">
+					<form onSubmit={handleSearch} className="flex flex-col w-full gap-3 sm:flex-row sm:items-center sm:flex-1">
+						<h3 className="text-xl font-bold text-white dark:text-gray-100 sm:text-2xl sm:whitespace-nowrap">Search</h3>
 						<input
 							type="text"
 							value={searchWord}
 							onChange={(e) => setSearchWord(e.target.value)}
 							placeholder="Enter search term (e.g., 09-118)"
-							className="flex-1 max-w-xs p-3 border border-gray-300 rounded-md outline-none dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white"
+							className="w-full p-3 border border-gray-300 rounded-md outline-none dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white sm:flex-1 sm:max-w-md"
 							disabled={loading}
 						/>
 						<button
 							type="submit"
 							disabled={loading}
-							className="px-6 py-3 font-semibold text-white transition-colors duration-200 bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
+							className="w-full px-6 py-3 font-semibold text-white transition-colors duration-200 bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto sm:whitespace-nowrap">
 							{loading ? "Searching..." : "Search"}
 						</button>
 					</form>
 
-					<div className="flex justify-end items-center gap-2 w-fit h-full notranslate">
+					<div className="flex items-center justify-start w-full gap-2 sm:justify-end sm:w-fit notranslate">
 						<div className="relative notranslate" ref={translateDropdownRef}>
 							<button
 								onClick={() => setShowTranslateDropdown(!showTranslateDropdown)}
-								className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors notranslate">
+								className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 notranslate">
 								<Languages className="w-4 h-4" />
 								<span className="notranslate">Translate</span>
 							</button>
 							{showTranslateDropdown && (
-								<div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700 z-50 notranslate">
+								<div className="absolute right-0 z-50 w-48 mt-2 bg-white border border-gray-200 rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700 notranslate">
 									<button
 										onClick={() => triggerTranslate("ja")}
-										className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
+										className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
 										Japanese
 									</button>
 									<button
 										onClick={() => triggerTranslate("en")}
-										className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
+										className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
 										English
 									</button>
 								</div>
@@ -352,7 +350,7 @@ function App() {
 						{sortedGroups.map(([prefix, groupResults]) => (
 							<div key={prefix} className="space-y-4">
 								{/* Group Header */}
-								<div className="sticky top-4 z-10 px-4 py-3 bg-indigo-600 text-white rounded-lg shadow-md dark:bg-indigo-800">
+								<div className="sticky z-10 px-4 py-3 text-white bg-indigo-600 rounded-lg shadow-md top-4 dark:bg-indigo-800">
 									<h2 className="text-xl font-bold">{prefix}</h2>
 									<p className="text-sm text-indigo-100 dark:text-indigo-200">
 										{groupResults.length} {groupResults.length === 1 ? "card" : "cards"}
@@ -389,7 +387,7 @@ function App() {
 							{/* Close button */}
 							<button
 								onClick={() => setModalImage(null)}
-								className="absolute top-2 right-2 z-10 p-2 text-white bg-black/75 rounded-full hover:bg-black transition-all cursor-pointer">
+								className="absolute z-10 p-2 text-white transition-all rounded-full cursor-pointer top-2 right-2 bg-black/75 hover:bg-black">
 								<X className="w-6 h-6" />
 							</button>
 							{/* Full size image */}
