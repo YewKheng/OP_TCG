@@ -241,17 +241,35 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 		}
 
 		// Extract card number
-		const cardNumber =
+		// Priority: Look for the specific product code element first (class "pote")
+		let cardNumber: string | undefined =
+			$('.pote, [class*="pote"]').first().text().trim() ||
 			$('.code, .number, [class*="code"], [class*="number"]').first().text().trim() ||
-			$("body")
-				.text()
-				.match(/(?:OP|ST|PRB|EB|P)\d+-\d+/)?.[0] ||
-			$("body")
-				.text()
-				.match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0] ||
-			$("body")
-				.text()
-				.match(/\d+-\d+/)?.[0];
+			undefined;
+
+		// If not found in specific elements, try regex patterns in the product details area first
+		if (!cardNumber) {
+			// Look in product details section (usually near the title/price)
+			const productSection = $('.product-detail, [class*="product"], [class*="detail"]').first();
+			if (productSection.length > 0) {
+				const sectionText = productSection.text();
+				cardNumber =
+					sectionText.match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0] ||
+					sectionText.match(/(?:OP|ST|PRB|EB|P)\d+-\d+/)?.[0] ||
+					sectionText.match(/\d+-\d+/)?.[0] ||
+					undefined;
+			}
+		}
+
+		// Fallback to body text if still not found
+		if (!cardNumber) {
+			const bodyText = $("body").text();
+			cardNumber =
+				bodyText.match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0] ||
+				bodyText.match(/(?:OP|ST|PRB|EB|P)\d+-\d+/)?.[0] ||
+				bodyText.match(/\d+-\d+/)?.[0] ||
+				undefined;
+		}
 
 		if (cardNumber) {
 			cardData.cardNumber = cardNumber;
@@ -341,11 +359,21 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 					$el.find('.name, .title, h2, h3, h4, [class*="name"], [class*="title"]').first().text().trim() ||
 					$el.find("a").first().text().trim();
 
-				const cardNumber =
+				// Extract card number - prioritize specific product code class
+				let cardNumber: string | undefined =
+					$el.find('.pote, [class*="pote"]').first().text().trim() ||
 					$el.find('.code, .number, [class*="code"], [class*="number"]').first().text().trim() ||
-					$el.text().match(/(?:OP|ST|PRB|EB|P)\d+-\d+/)?.[0] ||
-					$el.text().match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0] ||
-					$el.text().match(/\d+-\d+/)?.[0];
+					undefined;
+
+				// If not found, try regex patterns
+				if (!cardNumber) {
+					const elementText = $el.text();
+					cardNumber =
+						elementText.match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0] ||
+						elementText.match(/(?:OP|ST|PRB|EB|P)\d+-\d+/)?.[0] ||
+						elementText.match(/\d+-\d+/)?.[0] ||
+						undefined;
+				}
 
 				const price =
 					$el.find('.price, [class*="price"], [class*="cost"], [class*="yen"]').first().text().trim() ||
@@ -370,11 +398,13 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 		}
 
 		// Filter results
+		// For promo cards, card numbers might only be available on individual pages
+		// So we allow cards with valid links to pass through, even without card numbers initially
 		const filteredResults = results.filter((result) => {
-			const hasCardNumber = result.cardNumber && result.cardNumber.trim() !== "";
 			const hasLink = result.link && result.link.trim() !== "";
 			const hasValidLink = hasLink && (result.link!.includes("opc/card") || result.link!.includes("/promo"));
-			return hasCardNumber && hasValidLink;
+			// Allow cards with valid links, even if card number isn't found yet (will be scraped from individual page)
+			return hasValidLink;
 		});
 
 		// Remove duplicates
@@ -389,7 +419,7 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 		console.log(`Found ${uniqueResults.length} unique cards`);
 
 		// Scrape individual card pages
-		const BATCH_SIZE = 10;
+		const BATCH_SIZE = 15;
 		const DELAY_BETWEEN_BATCHES = 1000;
 		const DELAY_BETWEEN_REQUESTS = 200;
 
@@ -433,8 +463,40 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 			}
 		}
 
-		console.log(`✅ Successfully scraped ${detailedResults.length} cards for "${searchWord}"`);
-		return detailedResults;
+		// Final filter: remove cards that still don't have a card number after scraping
+		let filteredByCardNumber = detailedResults.filter((result) => {
+			return result.cardNumber && result.cardNumber.trim() !== "";
+		});
+
+		// Filter by search term: only keep cards whose card number matches the search term
+		// This prevents OP13 cards from appearing in OP01 results, etc.
+		const normalizedSearch = searchWord.trim().toUpperCase();
+		// Extract the set prefix from search term (e.g., "OP01" from "OP01" or "OP01-120")
+		const searchPrefix = normalizedSearch.match(/^(OP|ST|PRB|EB|P)\d+/)?.[0] || normalizedSearch;
+
+		const finalResults = filteredByCardNumber.filter((result) => {
+			if (!result.cardNumber) return false;
+			const cardNumberUpper = result.cardNumber.toUpperCase().trim();
+
+			// If search term is a set prefix (e.g., "OP01"), match cards starting with that prefix
+			// Examples: "OP01" should match "OP01-120" but not "OP13-023"
+			if (searchPrefix.length >= 3 && /^(OP|ST|PRB|EB|P)\d+$/.test(searchPrefix)) {
+				// Match cards that start with the same set prefix
+				return cardNumberUpper.startsWith(searchPrefix);
+			}
+
+			// Otherwise, use substring matching (for more specific searches like "OP01-120")
+			return cardNumberUpper.includes(normalizedSearch) || cardNumberUpper === normalizedSearch;
+		});
+
+		console.log(
+			`✅ Successfully scraped ${finalResults.length} cards for "${searchWord}" (${
+				detailedResults.length - finalResults.length
+			} removed: ${detailedResults.length - filteredByCardNumber.length} missing card numbers, ${
+				filteredByCardNumber.length - finalResults.length
+			} didn't match search term)`
+		);
+		return finalResults;
 	} catch (error) {
 		console.error(`❌ Error scraping "${searchWord}":`, error);
 		throw error;
