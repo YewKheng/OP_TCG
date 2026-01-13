@@ -44,6 +44,7 @@ function App() {
 	const [results, setResults] = useState<SearchResult[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [exchangeRate, setExchangeRate] = useState<number>(0.031); // Default approximate rate
+	const [lastScraped, setLastScraped] = useState<string | null>(null);
 	const [modalImage, setModalImage] = useState<string | null>(null);
 	const [showTranslateDropdown, setShowTranslateDropdown] = useState(false);
 	const translateDropdownRef = useRef<HTMLDivElement>(null);
@@ -177,6 +178,7 @@ function App() {
 		setLoading(true);
 		setError(null);
 		setResults([]);
+		setLastScraped(null);
 
 		try {
 			// Fetch exchange rate
@@ -194,6 +196,7 @@ function App() {
 			if (data.results && data.results.length > 0) {
 				console.log(`✅ Using cached data`);
 				setResults(data.results);
+				setLastScraped(data.lastScraped || null);
 			} else {
 				throw new Error("No results found in cached data");
 			}
@@ -276,27 +279,35 @@ function App() {
 					{/* Mobile: Search heading and Translate button on same row */}
 					<div className="flex items-center justify-between w-full gap-2 sm:hidden">
 						<h3 className="text-xl font-bold text-white dark:text-gray-100">Search</h3>
-						<div className="relative notranslate" ref={translateDropdownRef}>
-							<button
-								onClick={() => setShowTranslateDropdown(!showTranslateDropdown)}
-								className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 notranslate">
-								<Languages className="w-4 h-4" />
-								<span className="notranslate">Translate</span>
-							</button>
-							{showTranslateDropdown && (
-								<div className="absolute right-0 z-50 w-48 mt-2 bg-white border border-gray-200 rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700 notranslate">
-									<button
-										onClick={() => triggerTranslate("ja")}
-										className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
-										Japanese
-									</button>
-									<button
-										onClick={() => triggerTranslate("en")}
-										className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
-										English
-									</button>
-								</div>
+						<div className="flex items-center gap-2">
+							{lastScraped && (
+								<span className="text-xs text-gray-300 dark:text-gray-400 whitespace-nowrap">
+									Updated: {new Date(lastScraped).toLocaleDateString()}{" "}
+									{new Date(lastScraped).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+								</span>
 							)}
+							<div className="relative notranslate" ref={translateDropdownRef}>
+								<button
+									onClick={() => setShowTranslateDropdown(!showTranslateDropdown)}
+									className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 notranslate">
+									<Languages className="w-4 h-4" />
+									<span className="notranslate">Translate</span>
+								</button>
+								{showTranslateDropdown && (
+									<div className="absolute right-0 z-50 w-48 mt-2 bg-white border border-gray-200 rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700 notranslate">
+										<button
+											onClick={() => triggerTranslate("ja")}
+											className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
+											Japanese
+										</button>
+										<button
+											onClick={() => triggerTranslate("en")}
+											className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
+											English
+										</button>
+									</div>
+								)}
+							</div>
 						</div>
 					</div>
 
@@ -323,7 +334,13 @@ function App() {
 					</form>
 
 					{/* Desktop: Translate button */}
-					<div className="items-center justify-end hidden gap-2 sm:flex sm:w-fit notranslate">
+					<div className="items-center justify-end hidden gap-2 sm:flex sm:w-fit">
+						{lastScraped && (
+							<span className="text-xs text-gray-300 dark:text-gray-400 whitespace-nowrap notranslate">
+								Updated: {new Date(lastScraped).toLocaleDateString()}{" "}
+								{new Date(lastScraped).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+							</span>
+						)}
 						<div className="relative notranslate" ref={translateDropdownRef}>
 							<button
 								onClick={() => setShowTranslateDropdown(!showTranslateDropdown)}
