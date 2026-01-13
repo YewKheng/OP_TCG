@@ -275,8 +275,37 @@ function App() {
 				{/* Translate Button - Browser Style */}
 
 				<div className="flex flex-col w-full gap-4 mb-8 sm:flex-row sm:items-center">
+					{/* Mobile: Search heading and Translate button on same row */}
+					<div className="flex items-center justify-between w-full gap-2 sm:hidden">
+						<h3 className="text-xl font-bold text-white dark:text-gray-100">Search</h3>
+						<div className="relative notranslate" ref={translateDropdownRef}>
+							<button
+								onClick={() => setShowTranslateDropdown(!showTranslateDropdown)}
+								className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 notranslate">
+								<Languages className="w-4 h-4" />
+								<span className="notranslate">Translate</span>
+							</button>
+							{showTranslateDropdown && (
+								<div className="absolute right-0 z-50 w-48 mt-2 bg-white border border-gray-200 rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700 notranslate">
+									<button
+										onClick={() => triggerTranslate("ja")}
+										className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
+										Japanese
+									</button>
+									<button
+										onClick={() => triggerTranslate("en")}
+										className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
+										English
+									</button>
+								</div>
+							)}
+						</div>
+					</div>
+
 					<form onSubmit={handleSearch} className="flex flex-col w-full gap-3 sm:flex-row sm:items-center sm:flex-1">
-						<h3 className="text-xl font-bold text-white dark:text-gray-100 sm:text-2xl sm:whitespace-nowrap">Search</h3>
+						<h3 className="hidden text-xl font-bold text-white dark:text-gray-100 sm:block sm:text-2xl sm:whitespace-nowrap">
+							Search
+						</h3>
 						<input
 							type="text"
 							value={searchWord}
@@ -293,7 +322,8 @@ function App() {
 						</button>
 					</form>
 
-					<div className="flex items-center justify-start w-full gap-2 sm:justify-end sm:w-fit notranslate">
+					{/* Desktop: Translate button */}
+					<div className="items-center justify-end hidden gap-2 sm:flex sm:w-fit notranslate">
 						<div className="relative notranslate" ref={translateDropdownRef}>
 							<button
 								onClick={() => setShowTranslateDropdown(!showTranslateDropdown)}
