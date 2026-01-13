@@ -10,7 +10,8 @@
 		"lint": "eslint .",
 		"preview": "vite preview",
 		"scrape": "tsx scripts/scrape.ts",
-		"scrape:all": "tsx scripts/scrape-all.ts"
+		"scrape:all": "tsx scripts/scrape-all.ts",
+		"match-sets": "tsx scripts/match-sets.ts"
 	},
 	"dependencies": {
 		"@vercel/node": "^3.0.7",

@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 /**
- * Standalone scraping script for yuyu-tei.jp
- * Run manually to update cached data
+ * Match scraped data against the new URL format with vers[] parameter
+ * Stores matched results in sets.json with "SET" suffix
  *
  * Usage:
- *   npm run scrape <search_term>
- *   npm run scrape:all  (scrapes all common search terms)
+ *   npm run match-sets
  */
 
 import * as fs from "fs";
@@ -24,66 +23,58 @@ interface SearchResult {
 	[key: string]: unknown;
 }
 
+interface ScrapedDataEntry {
+	results: SearchResult[];
+	lastScraped: string;
+	count: number;
+}
+
 interface ScrapedData {
-	[searchWord: string]: {
-		results: SearchResult[];
-		lastScraped: string;
-		count: number;
-	};
+	[searchWord: string]: ScrapedDataEntry;
+}
+
+interface SetsData {
+	[searchWord: string]: ScrapedDataEntry;
 }
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const DATA_FILE = path.join(DATA_DIR, "scraped-data.json");
+const SCRAPED_DATA_FILE = path.join(DATA_DIR, "scraped-data.json");
+const SETS_DATA_FILE = path.join(DATA_DIR, "sets-data.json");
 
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-	fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-// Load existing data
-function loadData(): ScrapedData {
-	if (fs.existsSync(DATA_FILE)) {
+// Load scraped data
+function loadScrapedData(): ScrapedData {
+	if (fs.existsSync(SCRAPED_DATA_FILE)) {
 		try {
-			const content = fs.readFileSync(DATA_FILE, "utf-8");
+			const content = fs.readFileSync(SCRAPED_DATA_FILE, "utf-8");
 			return JSON.parse(content);
 		} catch (error) {
-			console.error("Error loading data file:", error);
+			console.error("Error loading scraped data file:", error);
 			return {};
 		}
 	}
 	return {};
 }
 
-// Save data
-function saveData(data: ScrapedData): void {
-	fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
+// Load sets data
+function loadSetsData(): SetsData {
+	if (fs.existsSync(SETS_DATA_FILE)) {
+		try {
+			const content = fs.readFileSync(SETS_DATA_FILE, "utf-8");
+			return JSON.parse(content);
+		} catch (error) {
+			console.error("Error loading sets data file:", error);
+			return {};
+		}
+	}
+	return {};
 }
 
-// Function to extract name from text
-function extractNameFromText(text: string): string {
-	const englishFirstPattern =
-		/[A-Za-z]+(?:-[A-Za-z]+)?\s+[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・！!]+(?:\([^)]*\))*/;
-	let match = text.match(englishFirstPattern);
-	if (match && match[0]) {
-		return match[0];
-	}
-
-	const dashFirstPattern = /-\s+[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・！!]+(?:\([^)]*\))*/;
-	match = text.match(dashFirstPattern);
-	if (match && match[0]) {
-		return match[0];
-	}
-
-	const japaneseFirstPattern = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・！!]+(?:\([^)]*\))*/;
-	match = text.match(japaneseFirstPattern);
-	if (match && match[0]) {
-		return match[0];
-	}
-
-	return "";
+// Save sets data
+function saveSetsData(data: SetsData): void {
+	fs.writeFileSync(SETS_DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
 }
 
-// Fetch URL directly (no proxy needed for server-side scraping)
+// Fetch URL directly
 async function fetchUrl(url: string): Promise<string> {
 	console.log(`Fetching: ${url}`);
 
@@ -114,7 +105,7 @@ async function fetchUrl(url: string): Promise<string> {
 
 	if (response.status === 403) {
 		throw new Error(
-			"403 Forbidden: The website is blocking requests. GitHub Actions IP addresses may be blocked. Consider running locally or using a different hosting service."
+			"403 Forbidden: The website is blocking requests. Consider running locally or using a different hosting service."
 		);
 	}
 
@@ -233,7 +224,10 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 		}
 
 		if (!name) {
-			name = extractNameFromText(bodyText);
+			const nameMatch = bodyText.match(/[A-Za-z]+(?:-[A-Za-z]+)?\s+[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・！!]+/);
+			if (nameMatch) {
+				name = nameMatch[0];
+			}
 		}
 
 		if (name) {
@@ -302,10 +296,12 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 	}
 }
 
-// Main scraping function
-async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
-	console.log(`\n🚀 Scraping search term: "${searchWord}"`);
-	const url = `https://yuyu-tei.jp/sell/opc/s/search?search_word=${encodeURIComponent(searchWord)}`;
+// Scrape search results using new URL format
+async function scrapeWithVersParam(searchWord: string): Promise<SearchResult[]> {
+	console.log(`\n🚀 Scraping with vers[] parameter: "${searchWord}"`);
+	const url = `https://yuyu-tei.jp/sell/opc/s/search?search_word=&vers[]=${encodeURIComponent(
+		searchWord
+	)}&rare=&type=&kizu=0`;
 
 	try {
 		const html = await fetchUrl(url);
@@ -379,13 +375,10 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 			if (foundCards) break;
 		}
 
-		// Filter results
-		// For promo cards, card numbers might only be available on individual pages
-		// So we allow cards with valid links to pass through, even without card numbers initially
+		// Filter results - allow cards with valid links
 		const filteredResults = results.filter((result) => {
 			const hasLink = result.link && result.link.trim() !== "";
 			const hasValidLink = hasLink && (result.link!.includes("opc/card") || result.link!.includes("/promo"));
-			// Allow cards with valid links, even if card number isn't found yet (will be scraped from individual page)
 			return hasValidLink;
 		});
 
@@ -398,10 +391,10 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 			return true;
 		});
 
-		console.log(`Found ${uniqueResults.length} unique cards`);
+		console.log(`Found ${uniqueResults.length} unique cards from vers[] search`);
 
-		// Scrape individual card pages
-		const BATCH_SIZE = 15;
+		// Scrape individual card pages for detailed info
+		const BATCH_SIZE = 10;
 		const DELAY_BETWEEN_BATCHES = 1000;
 		const DELAY_BETWEEN_REQUESTS = 200;
 
@@ -445,39 +438,12 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 			}
 		}
 
-		// Final filter: remove cards that still don't have a card number after scraping
-		let filteredByCardNumber = detailedResults.filter((result) => {
+		// Filter out cards without card numbers
+		const finalResults = detailedResults.filter((result) => {
 			return result.cardNumber && result.cardNumber.trim() !== "";
 		});
 
-		// Filter by search term: only keep cards whose card number matches the search term
-		// This prevents OP13 cards from appearing in OP01 results, etc.
-		const normalizedSearch = searchWord.trim().toUpperCase();
-		// Extract the set prefix from search term (e.g., "OP01" from "OP01" or "OP01-120")
-		const searchPrefix = normalizedSearch.match(/^(OP|ST|PRB|EB|P)\d+/)?.[0] || normalizedSearch;
-
-		const finalResults = filteredByCardNumber.filter((result) => {
-			if (!result.cardNumber) return false;
-			const cardNumberUpper = result.cardNumber.toUpperCase().trim();
-
-			// If search term is a set prefix (e.g., "OP01"), match cards starting with that prefix
-			// Examples: "OP01" should match "OP01-120" but not "OP13-023"
-			if (searchPrefix.length >= 3 && /^(OP|ST|PRB|EB|P)\d+$/.test(searchPrefix)) {
-				// Match cards that start with the same set prefix
-				return cardNumberUpper.startsWith(searchPrefix);
-			}
-
-			// Otherwise, use substring matching (for more specific searches like "OP01-120")
-			return cardNumberUpper.includes(normalizedSearch) || cardNumberUpper === normalizedSearch;
-		});
-
-		console.log(
-			`✅ Successfully scraped ${finalResults.length} cards for "${searchWord}" (${
-				detailedResults.length - finalResults.length
-			} removed: ${detailedResults.length - filteredByCardNumber.length} missing card numbers, ${
-				filteredByCardNumber.length - finalResults.length
-			} didn't match search term)`
-		);
+		console.log(`✅ Successfully scraped ${finalResults.length} cards for "${searchWord}"`);
 		return finalResults;
 	} catch (error) {
 		console.error(`❌ Error scraping "${searchWord}":`, error);
@@ -485,34 +451,182 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 	}
 }
 
+// Normalize link for comparison (remove trailing slashes, normalize case)
+function normalizeLink(link: string): string {
+	if (!link) return "";
+	let normalized = link.trim();
+	// Remove trailing slash
+	normalized = normalized.replace(/\/$/, "");
+	// Convert to lowercase for case-insensitive comparison
+	normalized = normalized.toLowerCase();
+	return normalized;
+}
+
+// Match results by link only
+function matchResults(existingResults: SearchResult[], newResults: SearchResult[]): SearchResult[] {
+	const matched: SearchResult[] = [];
+	const existingByLink = new Map<string, SearchResult>();
+
+	// Index existing results by normalized link
+	for (const result of existingResults) {
+		if (result.link) {
+			const normalizedLink = normalizeLink(result.link);
+			existingByLink.set(normalizedLink, result);
+		}
+	}
+
+	// Match new results against existing by link only
+	for (const newResult of newResults) {
+		if (newResult.link) {
+			const normalizedLink = normalizeLink(newResult.link);
+			if (existingByLink.has(normalizedLink)) {
+				// Only include if the matched item has a cardNumber
+				if (newResult.cardNumber && newResult.cardNumber.trim() !== "") {
+					matched.push(newResult);
+				}
+			}
+		}
+	}
+
+	return matched;
+}
+
+// Process a single search term
+async function processSearchTerm(searchWord: string, scrapedData: ScrapedData, setsData: SetsData): Promise<boolean> {
+	const setKey = `${searchWord}SET`;
+
+	try {
+		console.log(`\n🔍 Processing: ${searchWord}`);
+
+		// Get ALL existing results from entire scraped-data.json (not just the searchWord entry)
+		const allExistingResults: SearchResult[] = [];
+		for (const key in scrapedData) {
+			if (scrapedData[key]?.results) {
+				allExistingResults.push(...scrapedData[key].results);
+			}
+		}
+		console.log(`  Total existing results in scraped-data.json: ${allExistingResults.length}`);
+
+		// Scrape with new URL format
+		const newResults = await scrapeWithVersParam(searchWord);
+		console.log(`  New results from vers[]: ${newResults.length}`);
+
+		// Debug: Show sample links for debugging
+		if (allExistingResults.length > 0 && newResults.length > 0) {
+			console.log(`  Sample existing link: ${allExistingResults[0].link}`);
+			console.log(`  Sample new link: ${newResults[0].link}`);
+		}
+
+		// Match results against entire scraped-data.json
+		const matchedResults = matchResults(allExistingResults, newResults);
+		console.log(`  Matched results: ${matchedResults.length}`);
+
+		// Debug: Show why matches might be failing
+		if (matchedResults.length === 0 && newResults.length > 0) {
+			console.log(`  🔍 Debug: Checking why no matches...`);
+			const sampleNew = newResults[0];
+			if (sampleNew.link) {
+				const normalized = normalizeLink(sampleNew.link);
+				console.log(`    New link normalized: ${normalized}`);
+
+				// Check if any existing result has matching link
+				const existingSample = allExistingResults.find((r) => {
+					if (!r.link) return false;
+					const existingNormalized = normalizeLink(r.link);
+					return normalized === existingNormalized;
+				});
+				if (existingSample) {
+					console.log(`    ✅ Found potential match: ${existingSample.link}`);
+				} else {
+					console.log(`    ❌ No matching link found in existing results`);
+				}
+			}
+		}
+
+		// Store in sets.json
+		if (matchedResults.length > 0) {
+			setsData[setKey] = {
+				results: matchedResults,
+				lastScraped: new Date().toISOString(),
+				count: matchedResults.length,
+			};
+			saveSetsData(setsData);
+			console.log(`  ✅ Saved ${matchedResults.length} matched results as ${setKey}`);
+			return true;
+		} else {
+			console.log(`  ⚠️  No matches found for ${searchWord}`);
+			return false;
+		}
+	} catch (error) {
+		console.error(`\n  ❌ Failed to process ${searchWord}`);
+		console.error("Error:", error);
+		return false;
+	}
+}
+
 // Main execution
 async function main() {
 	const args = process.argv.slice(2);
-	const searchWord = args[0];
+	const specificTerm = args[0]; // Optional: specific search term to process
 
-	if (!searchWord) {
-		console.error("Usage: npm run scrape <search_term>");
-		console.error("Example: npm run scrape 09-118");
-		process.exit(1);
+	console.log("🚀 Starting set matching process...\n");
+
+	const scrapedData = loadScrapedData();
+	const setsData = loadSetsData();
+
+	// If specific term provided, process only that
+	if (specificTerm) {
+		const searchWord = specificTerm.toUpperCase();
+		if (!scrapedData[searchWord]) {
+			console.error(`❌ Search term "${searchWord}" not found in scraped-data.json`);
+			console.log(`Available terms: ${Object.keys(scrapedData).slice(0, 10).join(", ")}...`);
+			process.exit(1);
+		}
+
+		const success = await processSearchTerm(searchWord, scrapedData, setsData);
+		process.exit(success ? 0 : 1);
 	}
 
-	try {
-		const results = await scrapeSearchTerm(searchWord);
-		const data = loadData();
+	// Otherwise, process all terms
+	const searchTerms = Object.keys(scrapedData);
+	console.log(`Found ${searchTerms.length} search terms in scraped-data.json\n`);
 
-		data[searchWord] = {
-			results,
-			lastScraped: new Date().toISOString(),
-			count: results.length,
-		};
+	let successCount = 0;
+	let failCount = 0;
 
-		saveData(data);
-		console.log(`\n✅ Data saved to ${DATA_FILE}`);
-		console.log(`Total cards saved: ${results.length}`);
-	} catch (error) {
-		console.error("Scraping failed:", error);
-		process.exit(1);
+	for (let i = 0; i < searchTerms.length; i++) {
+		const searchWord = searchTerms[i];
+		const setKey = `${searchWord}SET`;
+		const progress = `[${i + 1}/${searchTerms.length}]`;
+
+		// Skip if already processed
+		if (setsData[setKey]) {
+			console.log(`${progress} ⏭️  Skipping ${searchWord} (already in sets.json)`);
+			continue;
+		}
+
+		const success = await processSearchTerm(searchWord, scrapedData, setsData);
+		if (success) {
+			successCount++;
+		} else {
+			failCount++;
+		}
+
+		// Delay between searches
+		if (i < searchTerms.length - 1) {
+			const delay = 3000 + Math.random() * 2000; // 3-5 seconds
+			console.log(`⏳ Waiting ${Math.round(delay / 1000)}s before next search...`);
+			await new Promise((resolve) => setTimeout(resolve, delay));
+		}
 	}
+
+	console.log("\n" + "=".repeat(50));
+	console.log("✅ Set matching completed!");
+	console.log(`Successfully processed: ${successCount} terms`);
+	if (failCount > 0) {
+		console.log(`Failed: ${failCount} terms`);
+	}
+	console.log("=".repeat(50));
 }
 
 main();
