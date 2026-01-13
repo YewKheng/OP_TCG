@@ -52,9 +52,15 @@ async function scrapeAll() {
 
 		try {
 			console.log(`\n${progress} 📋 Scraping: ${searchTerm}`);
-			execSync(`tsx ${SCRAPE_SCRIPT} ${searchTerm}`, {
-				stdio: "inherit",
+			const command = `tsx ${SCRAPE_SCRIPT} ${searchTerm}`;
+			console.log(`Running command: ${command}`);
+			console.log(`Script path: ${SCRAPE_SCRIPT}`);
+			console.log(`Working directory: ${process.cwd()}`);
+
+			execSync(command, {
+				stdio: "inherit", // Show output in real-time
 				cwd: process.cwd(),
+				env: { ...process.env },
 			});
 			console.log(`${progress} ✅ Completed: ${searchTerm}`);
 			successCount++;
@@ -63,8 +69,31 @@ async function scrapeAll() {
 			if (i < COMMON_SEARCH_TERMS.length - 1) {
 				await new Promise((resolve) => setTimeout(resolve, 2000));
 			}
-		} catch (error) {
-			console.error(`${progress} ❌ Failed to scrape ${searchTerm}:`, error);
+		} catch (error: unknown) {
+			console.error(`\n${progress} ❌ Failed to scrape ${searchTerm}`);
+			console.error("Error details:");
+
+			// Type guard for execSync error
+			if (error && typeof error === "object" && "stdout" in error) {
+				const execError = error as { stdout?: unknown; stderr?: unknown; status?: unknown; message?: unknown };
+				if (execError.stdout) {
+					console.error("STDOUT:", String(execError.stdout));
+				}
+				if (execError.stderr) {
+					console.error("STDERR:", String(execError.stderr));
+				}
+				if (execError.status) {
+					console.error("Exit status:", execError.status);
+				}
+			}
+
+			if (error instanceof Error) {
+				console.error("Error message:", error.message);
+				console.error("Error stack:", error.stack);
+			} else {
+				console.error("Unknown error:", error);
+			}
+
 			failCount++;
 			// Continue with next term even if one fails
 			// Still add delay to avoid rate limiting
