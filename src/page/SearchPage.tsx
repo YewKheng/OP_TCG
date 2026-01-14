@@ -236,25 +236,31 @@ function SearchPage() {
 		// Trim leading/trailing whitespace first
 		const trimmedName = name.trim();
 
+		// First, normalize "P R", "P L", "P SR", "P SEC", etc. to "P-R", "P-L", "P-SR", "P-SEC" for consistent display
+		// This handles cases where card names have spaces instead of dashes
+		const normalizedName = trimmedName.replace(/^P\s+([A-Z][A-Za-z]*)/, "P-$1");
+
 		// Match English letters and dashes at the start, before Japanese characters or space
 		// The pattern explicitly allows dashes within the prefix (e.g., "P-R", "P-SEC", "P-SR")
 		// Examples: "P-SEC", "P-SR", "SEC", "SR", "C", "R", "P-R", "P-L", etc.
 		// Also handles names with leading spaces like "  P-SEC モンキー・D・ルフィ"
 		// First try to match patterns with dashes (P-R, P-L, P-SEC, P-SR, etc.)
 		// This ensures "P-R" is captured as "P-R" not "PR"
-		let prefixMatch = trimmedName.match(/^([A-Za-z]+(?:-[A-Za-z]+)+)(?=\s|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/);
+		let prefixMatch = normalizedName.match(
+			/^([A-Za-z]+(?:-[A-Za-z]+)+)(?=\s|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/
+		);
 		if (prefixMatch && prefixMatch[1]) {
 			return prefixMatch[1];
 		}
 		// If no dash pattern, match simple letter prefix (SR, SEC, C, R, etc.)
-		prefixMatch = trimmedName.match(/^([A-Za-z]+)(?=\s|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/);
+		prefixMatch = normalizedName.match(/^([A-Za-z]+)(?=\s|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/);
 		if (prefixMatch && prefixMatch[1]) {
 			return prefixMatch[1];
 		}
 
 		// Handle names starting with dash (e.g., "- ドン!!カード" or "  - ドン!!カード")
-		if (trimmedName.startsWith("-")) {
-			return "-";
+		if (normalizedName.startsWith("-")) {
+			return "DON";
 		}
 
 		return "Other";
@@ -269,6 +275,7 @@ function SearchPage() {
 		acc[prefix].push(result);
 		return acc;
 	}, {} as Record<string, SearchResult[]>);
+	console.log("🚀 ~ SearchPage ~ groupedResults:", groupedResults);
 
 	// Custom order for prefixes
 	const prefixOrder = ["P-SEC", "SEC", "SP", "P-L", "L", "P-SR", "SR", "P-R", "R", "P-UC", "UC", "C"];
@@ -297,6 +304,7 @@ function SearchPage() {
 		// If neither is in the custom order, sort alphabetically
 		return a.localeCompare(b);
 	});
+	console.log("🚀 ~ SearchPage ~ sortedGroups:", sortedGroups);
 
 	return (
 		<div className="min-h-screen p-4">
@@ -438,7 +446,7 @@ function SearchPage() {
 							<div key={prefix} className="space-y-4">
 								{/* Group Header */}
 								<div className="sticky z-10 px-4 py-3 text-white bg-indigo-600 rounded-lg shadow-md top-4 dark:bg-indigo-800">
-									<h2 className="text-xl font-bold">{prefix}</h2>
+									<h2 className="text-xl font-bold">{prefix.replace(/-/g, "–")}</h2>
 									<p className="text-sm text-indigo-100 dark:text-indigo-200">
 										{groupResults.length} {groupResults.length === 1 ? "card" : "cards"}
 									</p>

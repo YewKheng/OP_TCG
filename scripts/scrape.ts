@@ -21,6 +21,7 @@ interface SearchResult {
 	link?: string;
 	color?: string;
 	scrapedAt?: string;
+	set?: string;
 	[key: string]: unknown;
 }
 
@@ -240,21 +241,32 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 			cardData.name = name;
 		}
 
-		// Extract card number
-		const cardNumber =
+		// Extract card number - prioritize span.pote element
+		let cardNumber: string | undefined =
+			$('span.pote, span[class*="pote"]').first().text().trim() ||
 			$('.code, .number, [class*="code"], [class*="number"]').first().text().trim() ||
 			$("body")
 				.text()
 				.match(/(?:OP|ST|PRB|EB|P)\d+-\d+/)?.[0] ||
 			$("body")
 				.text()
-				.match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0] ||
-			$("body")
-				.text()
-				.match(/\d+-\d+/)?.[0];
+				.match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0];
 
-		if (cardNumber) {
-			cardData.cardNumber = cardNumber;
+		// If card number is "-", keep it as "-"
+		if (cardNumber && cardNumber.trim() === "-") {
+			cardData.cardNumber = "DON";
+		} else {
+			// Validate card number format - must start with OP, ST, PRB, EB, or P
+			if (cardNumber) {
+				cardNumber = cardNumber.trim();
+				const isValidCardNumber = /^(OP|ST|PRB|EB|P)[\d-]+/.test(cardNumber);
+				if (!isValidCardNumber) {
+					cardNumber = undefined;
+				}
+			}
+
+			// Set to "-" if no valid card number found
+			cardData.cardNumber = cardNumber || "DON";
 		}
 
 		// Extract color
@@ -302,10 +314,83 @@ async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> 
 	}
 }
 
+// Map search terms to custom set values
+function getSetValue(searchWord: string): string {
+	// Customize this mapping to set your desired values
+	const setMapping: Record<string, string> = {
+		op01: "Romance Dawn",
+		op02: "Paramount War",
+		op03: "Pillars of Strength",
+		op04: "Kingdoms of Intrigue",
+		op05: "Awakening of the New Era",
+		op06: "Wings of the Captain",
+		op07: "500 Years in the Future",
+		op08: "Two Legends",
+		op09: "Emporers in the New World",
+		op10: "Royal Blood",
+		op11: "A Fist of Divine Speed",
+		op12: "Legacy of the Master",
+		op13: "Carrying on his Will",
+		op14: "The Azure Sea's Seven",
+
+		prb01: "One Piece Card The Best",
+		prb02: "One Piece Card The Best Vol.2",
+
+		st01: "Straw Hat Pirates",
+		st02: "Worse Generation",
+		st03: "Seven Warlords of the Sea",
+		st04: "Animal Kingdom Pirates",
+		st05: "One Piece Film Edition",
+		st06: "Marines",
+		st07: "Big Mom Pirates",
+		st08: "Side Monkey D. Luffy",
+		st09: "Side Yamato",
+		st10: "The Three Captains",
+		st11: "Side Uta",
+		st12: "Zoro & Sanji",
+		st13: "The Three Brothers",
+		st14: "3D2Y",
+		st15: "RED Edward Newgate",
+		st16: "GREEN Uta",
+		st17: "BLUE Donquixote Doflamingo",
+		st18: "PURPLE Monkey D. Luffy",
+		st19: "BLACK Smoker",
+		st20: "YELLOW Charlotte Katakuri",
+		st21: "Gear 5",
+		st22: "Ace & Newgate",
+		st23: "RED Shanks",
+		st24: "GREEN Jewelry Bonney",
+		st25: "BLUE Buggy",
+		st26: "PURPLE BLACK Monkey.D. Luffy",
+		st27: "BLACK Marshall D. Teach",
+		st28: "GREEN YELLOW Yamato",
+		st29: "Egghead",
+
+		eb01: "Memorial Collection",
+		eb02: "Anime 25th Collection",
+		eb03: "Heroines Edition",
+		eb04: "",
+
+		"promo-100": "Promo 100",
+		"promo-200": "Promo 200",
+		"promo-op10": "Promo OP10",
+		"promo-op20": "Promo OP20",
+		"promo-st10": "Promo ST10",
+		"promo-eb10": "Promo EB10",
+	};
+
+	// Return custom mapped value if exists, otherwise return searchWord as default
+	return setMapping[searchWord.toLowerCase()] || searchWord;
+}
+
 // Main scraping function
 async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 	console.log(`\n🚀 Scraping search term: "${searchWord}"`);
-	const url = `https://yuyu-tei.jp/sell/opc/s/search?search_word=${encodeURIComponent(searchWord)}`;
+	const url = `https://yuyu-tei.jp/sell/opc/s/search?search_word=&vers[]=${encodeURIComponent(
+		searchWord
+	)}&rare=&type=&kizu=0`;
+
+	const setValue = getSetValue(searchWord);
 
 	try {
 		const html = await fetchUrl(url);
@@ -351,11 +436,25 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 					$el.find('.name, .title, h2, h3, h4, [class*="name"], [class*="title"]').first().text().trim() ||
 					$el.find("a").first().text().trim();
 
-				const cardNumber =
+				let cardNumber =
+					$el.find('span.pote, span[class*="pote"]').first().text().trim() ||
 					$el.find('.code, .number, [class*="code"], [class*="number"]').first().text().trim() ||
 					$el.text().match(/(?:OP|ST|PRB|EB|P)\d+-\d+/)?.[0] ||
-					$el.text().match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0] ||
-					$el.text().match(/\d+-\d+/)?.[0];
+					$el.text().match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0];
+
+				// If card number is "-", keep it as "-"
+				if (cardNumber && cardNumber.trim() === "-") {
+					cardNumber = "-";
+				} else {
+					// Validate card number format - must start with OP, ST, PRB, EB, or P
+					if (cardNumber) {
+						cardNumber = cardNumber.trim();
+						const isValidCardNumber = /^(OP|ST|PRB|EB|P)[\d-]+/.test(cardNumber);
+						if (!isValidCardNumber) {
+							cardNumber = undefined;
+						}
+					}
+				}
 
 				const price =
 					$el.find('.price, [class*="price"], [class*="cost"], [class*="yen"]').first().text().trim() ||
@@ -367,10 +466,11 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 				if (image || name) {
 					results.push({
 						name: name || undefined,
-						cardNumber: cardNumber || undefined,
+						cardNumber: cardNumber || "-",
 						price: price || undefined,
 						image: image ? (image.startsWith("http") ? image : `https://yuyu-tei.jp${image}`) : undefined,
 						link: link ? (link.startsWith("http") ? link : `https://yuyu-tei.jp${link}`) : undefined,
+						set: setValue,
 					});
 					foundCards = true;
 				}
@@ -423,17 +523,25 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 
 					try {
 						const cardData = await scrapeCardPage(result.link);
+						// Use cardData.cardNumber if it exists and is not "-", otherwise use result.cardNumber, otherwise "-"
+						const finalCardNumber =
+							cardData.cardNumber && cardData.cardNumber !== "-"
+								? cardData.cardNumber
+								: result.cardNumber && result.cardNumber !== "-"
+								? result.cardNumber
+								: "-";
 						return {
 							...result,
 							...cardData,
 							link: result.link,
-							cardNumber: cardData.cardNumber || result.cardNumber,
+							cardNumber: finalCardNumber,
 							price: cardData.price || result.price,
 							scrapedAt: new Date().toISOString(),
+							set: setValue,
 						};
 					} catch (error) {
 						console.error(`Error scraping ${result.link}:`, error);
-						return { ...result, scrapedAt: new Date().toISOString() };
+						return { ...result, scrapedAt: new Date().toISOString(), set: setValue };
 					}
 				})
 			);
@@ -445,38 +553,15 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 			}
 		}
 
-		// Final filter: remove cards that still don't have a card number after scraping
-		let filteredByCardNumber = detailedResults.filter((result) => {
-			return result.cardNumber && result.cardNumber.trim() !== "";
-		});
+		// No filtering needed - vers[] parameter in URL already filters results server-side
+		const finalResults = detailedResults;
 
-		// Filter by search term: only keep cards whose card number matches the search term
-		// This prevents OP13 cards from appearing in OP01 results, etc.
-		const normalizedSearch = searchWord.trim().toUpperCase();
-		// Extract the set prefix from search term (e.g., "OP01" from "OP01" or "OP01-120")
-		const searchPrefix = normalizedSearch.match(/^(OP|ST|PRB|EB|P)\d+/)?.[0] || normalizedSearch;
-
-		const finalResults = filteredByCardNumber.filter((result) => {
-			if (!result.cardNumber) return false;
-			const cardNumberUpper = result.cardNumber.toUpperCase().trim();
-
-			// If search term is a set prefix (e.g., "OP01"), match cards starting with that prefix
-			// Examples: "OP01" should match "OP01-120" but not "OP13-023"
-			if (searchPrefix.length >= 3 && /^(OP|ST|PRB|EB|P)\d+$/.test(searchPrefix)) {
-				// Match cards that start with the same set prefix
-				return cardNumberUpper.startsWith(searchPrefix);
-			}
-
-			// Otherwise, use substring matching (for more specific searches like "OP01-120")
-			return cardNumberUpper.includes(normalizedSearch) || cardNumberUpper === normalizedSearch;
-		});
+		const cardsWithoutCardNumber = finalResults.filter((r) => !r.cardNumber || r.cardNumber.trim() === "").length;
 
 		console.log(
 			`✅ Successfully scraped ${finalResults.length} cards for "${searchWord}" (${
-				detailedResults.length - finalResults.length
-			} removed: ${detailedResults.length - filteredByCardNumber.length} missing card numbers, ${
-				filteredByCardNumber.length - finalResults.length
-			} didn't match search term)`
+				cardsWithoutCardNumber > 0 ? `${cardsWithoutCardNumber} without card numbers included` : ""
+			})`
 		);
 		return finalResults;
 	} catch (error) {

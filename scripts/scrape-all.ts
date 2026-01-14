@@ -9,38 +9,50 @@ import { execSync } from "child_process";
 
 const SCRAPE_SCRIPT = path.join(process.cwd(), "scripts", "scrape.ts");
 
-// Generate search terms
+// Generate search terms - using lowercase to match vers[] parameter format
 const COMMON_SEARCH_TERMS: string[] = [];
 
-// OP01 to OP20
-for (let i = 1; i <= 15; i++) {
+// OP01 to OP14 (lowercase: op01 to op14)
+for (let i = 1; i <= 14; i++) {
 	const num = i.toString().padStart(2, "0");
-	COMMON_SEARCH_TERMS.push(`OP${num}`);
+	COMMON_SEARCH_TERMS.push(`op${num}`);
 }
 
-// EB01 to EB04
+// PRB01 to PRB02 (lowercase: prb01 to prb02)
+for (let i = 1; i <= 2; i++) {
+	const num = i.toString().padStart(2, "0");
+	COMMON_SEARCH_TERMS.push(`prb${num}`);
+}
+
+// ST01 to ST29 (lowercase: st01 to st29)
+for (let i = 1; i <= 29; i++) {
+	const num = i.toString().padStart(2, "0");
+	COMMON_SEARCH_TERMS.push(`st${num}`);
+}
+
+// EB01 to EB04 (lowercase: eb01 to eb04)
 for (let i = 1; i <= 4; i++) {
 	const num = i.toString().padStart(2, "0");
-	COMMON_SEARCH_TERMS.push(`EB${num}`);
+	COMMON_SEARCH_TERMS.push(`eb${num}`);
 }
 
-// ST01 to ST30
-for (let i = 1; i <= 30; i++) {
-	const num = i.toString().padStart(2, "0");
-	COMMON_SEARCH_TERMS.push(`ST${num}`);
-}
-
-// P- (all P-series cards)
-COMMON_SEARCH_TERMS.push("P-");
+// Promo cards
+COMMON_SEARCH_TERMS.push("promo-100");
+COMMON_SEARCH_TERMS.push("promo-200");
+COMMON_SEARCH_TERMS.push("promo-op10");
+COMMON_SEARCH_TERMS.push("promo-op20");
+COMMON_SEARCH_TERMS.push("promo-st10");
+COMMON_SEARCH_TERMS.push("promo-eb10");
 
 async function scrapeAll() {
 	console.log("🚀 Starting batch scrape...\n");
 	console.log(`Total search terms to scrape: ${COMMON_SEARCH_TERMS.length}`);
 	console.log(`Breakdown:`);
-	console.log(`  - OP01 to OP15: 15 terms`);
-	console.log(`  - EB01 to EB04: 4 terms`);
-	console.log(`  - ST01 to ST30: 30 terms`);
-	console.log(`  - P-: 1 term (all P-series cards)`);
+	console.log(`  - op01 to op14: 14 terms`);
+	console.log(`  - prb01 to prb02: 2 terms`);
+	console.log(`  - st01 to st29: 29 terms`);
+	console.log(`  - eb01 to eb04: 4 terms`);
+	console.log(`  - promo cards: 6 terms (promo-100, promo-200, promo-op10, promo-op20, promo-st10, promo-eb10)`);
 	console.log(`\nThis will take a while. Each term takes ~2-10 minutes depending on card count.\n`);
 
 	let successCount = 0;
