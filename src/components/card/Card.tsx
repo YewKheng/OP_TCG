@@ -101,7 +101,7 @@ const Card: React.FC<CardProps> = ({ result, exchangeRate, onImageClick, isLoadi
 		: undefined;
 
 	return (
-		<div className="flex flex-col items-center justify-start p-4 transition-shadow bg-indigo-600/75 rounded-lg shadow-lg hover:shadow-xl">
+		<div className="flex flex-col items-center justify-start p-4 transition-shadow bg-grey/75 rounded-lg shadow-lg hover:shadow-xl hover:scale-105">
 			{result.image && imageUrl && (
 				<img
 					src={imageUrl}
@@ -115,28 +115,30 @@ const Card: React.FC<CardProps> = ({ result, exchangeRate, onImageClick, isLoadi
 				/>
 			)}
 			{result.cardNumber && (
-				<p className="text-sm text-white border border-white rounded-md px-2 py-px">{result.cardNumber}</p>
+				<p className="text-sm text-black font-semibold border-2 border-black rounded-md px-2 py-px">
+					{result.cardNumber}
+				</p>
 			)}
 			{result.name && (
 				<div className="flex flex-col items-center justify-center text-center pt-2">
-					<h4 className="mb-1 text-lg font-semibold text-white">{result.name}</h4>
+					<h4 className="mb-1 text-lg font-bold text-black">{result.name}</h4>
 				</div>
 			)}
 			<div className="mb-2 space-y-1 text-sm text-white">
 				{result.color && (
-					<p className="text-indigo-100">
+					<p className="text-black font-medium">
 						<span>Color:</span> {translateColor(result.color)}
 					</p>
 				)}
 			</div>
 			{result.price && (
 				<div className="mb-2 flex flex-col items-center justify-center">
-					<p className="text-xl font-bold text-white">{convertToMYR(result.price, exchangeRate)}</p>
-					<p className="text-sm text-indigo-100">{result.price}</p>
+					<p className="text-xl font-bold text-black">{convertToMYR(result.price, exchangeRate)}</p>
+					<p className="text-sm text-black font-semibold">{result.price}</p>
 				</div>
 			)}
 			{result.link && linkUrl && (
-				<a href={linkUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-white/50 hover:underline">
+				<a href={linkUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-black/75 hover:underline">
 					View Details →
 				</a>
 			)}

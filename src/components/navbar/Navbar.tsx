@@ -90,23 +90,23 @@ const Navbar = () => {
 						<img src={cincaiLogo} alt="Cincai Logo" className="w-24 h-auto" />
 					</a>
 					{/* Mobile: Translate button */}
-					<div className="relative sm:hidden notranslate" ref={translateDropdownRefMobile}>
+					<div className="relative sm:hidden notranslate cursor-pointer" ref={translateDropdownRefMobile}>
 						<button
 							onClick={() => setShowTranslateDropdownMobile(!showTranslateDropdownMobile)}
-							className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 notranslate">
+							className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-300 notranslate">
 							<Languages className="w-4 h-4" />
 							<span className="notranslate">Translate</span>
 						</button>
 						{showTranslateDropdownMobile && (
-							<div className="absolute right-0 z-50 w-48 mt-2 bg-white border border-gray-200 rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700 notranslate">
+							<div className="absolute right-0 z-50 w-48 mt-2 bg-white border border-gray-200 rounded-md shadow-lg notranslate">
 								<button
 									onClick={() => triggerTranslate("ja")}
-									className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
+									className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-300 notranslate">
 									Japanese
 								</button>
 								<button
 									onClick={() => triggerTranslate("en")}
-									className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
+									className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-300 notranslate">
 									English
 								</button>
 							</div>
@@ -143,24 +143,24 @@ const Navbar = () => {
 				</form>
 
 				{/* Desktop: Translate button */}
-				<div className="hidden sm:block">
+				<div className="hidden sm:block cursor-pointer">
 					<div className="relative notranslate" ref={translateDropdownRef}>
 						<button
 							onClick={() => setShowTranslateDropdown(!showTranslateDropdown)}
-							className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 notranslate">
+							className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-300 notranslate">
 							<Languages className="w-4 h-4" />
 							<span className="notranslate">Translate</span>
 						</button>
 						{showTranslateDropdown && (
-							<div className="absolute right-0 z-50 w-48 mt-2 bg-white border border-gray-200 rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700 notranslate">
+							<div className="absolute right-0 z-50 w-48 mt-2 bg-white border border-gray-200 rounded-md shadow-lg notranslate">
 								<button
 									onClick={() => triggerTranslate("ja")}
-									className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
+									className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-300 notranslate">
 									Japanese
 								</button>
 								<button
 									onClick={() => triggerTranslate("en")}
-									className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
+									className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-300 notranslate">
 									English
 								</button>
 							</div>

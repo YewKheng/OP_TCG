@@ -229,9 +229,9 @@ function SearchPage() {
 			{/* Search Results Header */}
 			{searchWord && (
 				<div className="mb-6">
-					<h2 className="text-2xl font-bold text-white mb-2">Search Results for: {searchWord}</h2>
+					<h2 className="text-2xl font-bold text-gray-900/75 mb-1">Search Results for: {searchWord}</h2>
 					{lastScraped && (
-						<span className="text-sm text-white notranslate">
+						<span className="text-sm text-gray-900/75 notranslate">
 							Updated: {new Date(lastScraped).toLocaleDateString()}{" "}
 							{new Date(lastScraped).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
 						</span>
@@ -254,9 +254,9 @@ function SearchPage() {
 					{sortedGroups.map(([prefix, groupResults]) => (
 						<div key={prefix} className="space-y-4">
 							{/* Group Header */}
-							<div className="sticky z-10 px-4 py-3 text-white bg-indigo-800 rounded-lg shadow-md top-4">
+							<div className="sticky z-10 px-4 py-3 text-black bg-grey rounded-lg shadow-md top-4">
 								<h2 className="text-xl font-bold">{prefix.replace(/-/g, "–")}</h2>
-								<p className="text-sm text-indigo-100">
+								<p className="text-sm text-black font-medium">
 									{groupResults.length} {groupResults.length === 1 ? "card" : "cards"}
 								</p>
 							</div>
