@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
-import { X, Languages } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { X } from "lucide-react";
 import Card from "../components/card/Card";
 
 interface SearchResult {
@@ -39,51 +40,14 @@ interface ApiResponse {
 }
 
 function SearchPage() {
-	const [searchWord, setSearchWord] = useState("");
+	const [searchParams] = useSearchParams();
+	const searchWord = searchParams.get("q") || "";
 	const [loading, setLoading] = useState(false);
 	const [results, setResults] = useState<SearchResult[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [exchangeRate, setExchangeRate] = useState<number>(0.031); // Default approximate rate
 	const [lastScraped, setLastScraped] = useState<string | null>(null);
 	const [modalImage, setModalImage] = useState<string | null>(null);
-	const [showTranslateDropdown, setShowTranslateDropdown] = useState(false);
-	const [showTranslateDropdownMobile, setShowTranslateDropdownMobile] = useState(false);
-	const translateDropdownRef = useRef<HTMLDivElement>(null);
-	const translateDropdownRefMobile = useRef<HTMLDivElement>(null);
-
-	// Close dropdown when clicking outside (desktop)
-	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
-			if (translateDropdownRef.current && !translateDropdownRef.current.contains(event.target as Node)) {
-				setShowTranslateDropdown(false);
-			}
-		};
-
-		if (showTranslateDropdown) {
-			document.addEventListener("mousedown", handleClickOutside);
-		}
-
-		return () => {
-			document.removeEventListener("mousedown", handleClickOutside);
-		};
-	}, [showTranslateDropdown]);
-
-	// Close dropdown when clicking outside (mobile)
-	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
-			if (translateDropdownRefMobile.current && !translateDropdownRefMobile.current.contains(event.target as Node)) {
-				setShowTranslateDropdownMobile(false);
-			}
-		};
-
-		if (showTranslateDropdownMobile) {
-			document.addEventListener("mousedown", handleClickOutside);
-		}
-
-		return () => {
-			document.removeEventListener("mousedown", handleClickOutside);
-		};
-	}, [showTranslateDropdownMobile]);
 
 	// Hide Google Translate banner visually (but keep in DOM for translation to work)
 	useEffect(() => {
@@ -140,94 +104,52 @@ function SearchPage() {
 		};
 	}, []);
 
-	// Function to trigger Google Translate
-	const triggerTranslate = (targetLang: string) => {
-		console.log("Triggering translation to:", targetLang);
-		setShowTranslateDropdown(false);
-		setShowTranslateDropdownMobile(false);
-
-		// Set the translation cookie
-		const cookieValue = `/ja/${targetLang}`;
-		const cookieString = `googtrans=${cookieValue}; path=/; max-age=31536000; SameSite=Lax`;
-		document.cookie = cookieString;
-		console.log("Cookie set:", cookieString);
-		console.log("Current cookies:", document.cookie);
-
-		// Save current state before reload
-		if (searchWord) {
-			localStorage.setItem("searchWord", searchWord);
-			console.log("Saved search word:", searchWord);
-		}
-		if (results.length > 0) {
-			localStorage.setItem("searchResults", JSON.stringify(results));
-			console.log("Saved results count:", results.length);
-		}
-
-		// Small delay to ensure cookie is set, then reload
-		setTimeout(() => {
-			console.log("Reloading page...");
-			window.location.reload();
-		}, 100);
-	};
-
-	// Restore state from localStorage on mount (in case of page reload for translation)
+	// Perform search when searchWord changes (from URL params)
 	useEffect(() => {
-		const savedSearchWord = localStorage.getItem("searchWord");
-		const savedResults = localStorage.getItem("searchResults");
-
-		if (savedSearchWord) {
-			setSearchWord(savedSearchWord);
-			localStorage.removeItem("searchWord");
+		if (!searchWord.trim()) {
+			setResults([]);
+			setError(null);
+			setLastScraped(null);
+			return;
 		}
 
-		if (savedResults) {
+		const performSearch = async () => {
+			setLoading(true);
+			setError(null);
+			setResults([]);
+			setLastScraped(null);
+
 			try {
-				const parsed = JSON.parse(savedResults);
-				setResults(parsed);
-				localStorage.removeItem("searchResults");
-			} catch (error) {
-				console.error("Failed to parse saved results:", error);
+				// Fetch exchange rate
+				const rate = await getExchangeRate();
+				setExchangeRate(rate);
+
+				// Fetch from cached data API (only cached data is available)
+				const response = await fetch(`/api/search?search_word=${encodeURIComponent(searchWord)}`);
+				const data: ApiResponse = await response.json();
+
+				if (!response.ok) {
+					throw new Error(data.error || data.message || "Failed to fetch data");
+				}
+
+				if (data.results && data.results.length > 0) {
+					console.log(`✅ Using cached data`);
+					setResults(data.results);
+					setLastScraped(data.lastScraped || null);
+				} else {
+					throw new Error("No results found in cached data");
+				}
+			} catch (err) {
+				const errorMessage = err instanceof Error ? err.message : "An error occurred while searching";
+				setError(errorMessage);
+				console.error("Search error:", err);
+			} finally {
+				setLoading(false);
 			}
-		}
-	}, []);
+		};
 
-	const handleSearch = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!searchWord.trim()) return;
-
-		setLoading(true);
-		setError(null);
-		setResults([]);
-		setLastScraped(null);
-
-		try {
-			// Fetch exchange rate
-			const rate = await getExchangeRate();
-			setExchangeRate(rate);
-
-			// Fetch from cached data API (only cached data is available)
-			const response = await fetch(`/api/search?search_word=${encodeURIComponent(searchWord)}`);
-			const data: ApiResponse = await response.json();
-
-			if (!response.ok) {
-				throw new Error(data.error || data.message || "Failed to fetch data");
-			}
-
-			if (data.results && data.results.length > 0) {
-				console.log(`✅ Using cached data`);
-				setResults(data.results);
-				setLastScraped(data.lastScraped || null);
-			} else {
-				throw new Error("No results found in cached data");
-			}
-		} catch (err) {
-			const errorMessage = err instanceof Error ? err.message : "An error occurred while searching";
-			setError(errorMessage);
-			console.error("Search error:", err);
-		} finally {
-			setLoading(false);
-		}
-	};
+		performSearch();
+	}, [searchWord]);
 
 	// Function to extract prefix from card name (e.g., "P-SEC", "P-SR", "SEC", etc.)
 	const extractPrefix = (name: string | undefined): string => {
@@ -243,9 +165,8 @@ function SearchPage() {
 		// Match English letters and dashes at the start, before Japanese characters or space
 		// The pattern explicitly allows dashes within the prefix (e.g., "P-R", "P-SEC", "P-SR")
 		// Examples: "P-SEC", "P-SR", "SEC", "SR", "C", "R", "P-R", "P-L", etc.
-		// Also handles names with leading spaces like "  P-SEC モンキー・D・ルフィ"
 		// First try to match patterns with dashes (P-R, P-L, P-SEC, P-SR, etc.)
-		// This ensures "P-R" is captured as "P-R" not "PR"
+
 		let prefixMatch = normalizedName.match(
 			/^([A-Za-z]+(?:-[A-Za-z]+)+)(?=\s|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/
 		);
@@ -275,7 +196,6 @@ function SearchPage() {
 		acc[prefix].push(result);
 		return acc;
 	}, {} as Record<string, SearchResult[]>);
-	console.log("🚀 ~ SearchPage ~ groupedResults:", groupedResults);
 
 	// Custom order for prefixes
 	const prefixOrder = ["P-SEC", "SEC", "SP", "P-L", "L", "P-SR", "SR", "P-R", "R", "P-UC", "UC", "C"];
@@ -288,7 +208,6 @@ function SearchPage() {
 		if (a === "-") return 1;
 		if (b === "-") return -1;
 
-		// Get index in custom order (if not found, use Infinity to put at end)
 		const indexA = prefixOrder.indexOf(a);
 		const indexB = prefixOrder.indexOf(b);
 
@@ -304,199 +223,88 @@ function SearchPage() {
 		// If neither is in the custom order, sort alphabetically
 		return a.localeCompare(b);
 	});
-	console.log("🚀 ~ SearchPage ~ sortedGroups:", sortedGroups);
 
 	return (
-		<div className="min-h-screen p-4">
-			<div className="max-w-6xl mx-auto">
-				{/* Translate Button - Browser Style */}
+		<>
+			{/* Search Results Header */}
+			{searchWord && (
+				<div className="mb-6">
+					<h2 className="text-2xl font-bold text-white mb-2">Search Results for: {searchWord}</h2>
+					{lastScraped && (
+						<span className="text-sm text-white notranslate">
+							Updated: {new Date(lastScraped).toLocaleDateString()}{" "}
+							{new Date(lastScraped).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+						</span>
+					)}
+				</div>
+			)}
 
-				<div className="flex flex-col justify-end w-full gap-4 mb-8 sm:flex-row sm:items-center">
-					{/* Mobile: Search heading and Translate button on same row */}
-					<div className="flex items-center justify-between w-full gap-2 sm:hidden">
-						<h3 className="text-xl font-bold text-white dark:text-gray-100">Search</h3>
-						<div className="flex items-center gap-2">
-							{lastScraped && (
-								<span className="text-xs text-gray-300 dark:text-gray-400 whitespace-nowrap">
-									Updated: {new Date(lastScraped).toLocaleDateString()}{" "}
-									{new Date(lastScraped).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-								</span>
-							)}
-							<div className="relative notranslate" ref={translateDropdownRefMobile}>
-								<button
-									onClick={() => setShowTranslateDropdownMobile(!showTranslateDropdownMobile)}
-									className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 notranslate">
-									<Languages className="w-4 h-4" />
-									<span className="notranslate">Translate</span>
-								</button>
-								{showTranslateDropdownMobile && (
-									<div className="absolute right-0 z-50 w-48 mt-2 bg-white border border-gray-200 rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700 notranslate">
-										<button
-											onClick={() => triggerTranslate("ja")}
-											className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
-											Japanese
-										</button>
-										<button
-											onClick={() => triggerTranslate("en")}
-											className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
-											English
-										</button>
-									</div>
-								)}
+			{error && <div className="p-4 mb-4 text-white bg-red-700 rounded-md">{error}</div>}
+
+			{loading && (
+				<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+					{Array.from({ length: 6 }).map((_, index) => (
+						<Card key={index} isLoading={true} exchangeRate={exchangeRate} onImageClick={() => {}} />
+					))}
+				</div>
+			)}
+
+			{!loading && results.length > 0 && (
+				<div className="space-y-8">
+					{sortedGroups.map(([prefix, groupResults]) => (
+						<div key={prefix} className="space-y-4">
+							{/* Group Header */}
+							<div className="sticky z-10 px-4 py-3 text-white bg-indigo-800 rounded-lg shadow-md top-4">
+								<h2 className="text-xl font-bold">{prefix.replace(/-/g, "–")}</h2>
+								<p className="text-sm text-indigo-100">
+									{groupResults.length} {groupResults.length === 1 ? "card" : "cards"}
+								</p>
 							</div>
-							{/* Google Translate Widget (positioned off-screen but functional) */}
-							<div
-								id="google_translate_element_mobile"
-								style={{
-									position: "fixed",
-									top: "-1000px",
-									left: "-1000px",
-									width: "1px",
-									height: "1px",
-									opacity: 0,
-									zIndex: -1,
-								}}></div>
+							{/* Group Cards */}
+							<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+								{groupResults.map((result, index) => (
+									<Card
+										key={`${prefix}-${index}`}
+										result={result}
+										exchangeRate={exchangeRate}
+										onImageClick={(imageUrl) => setModalImage(imageUrl)}
+									/>
+								))}
+							</div>
 						</div>
-					</div>
+					))}
+				</div>
+			)}
 
-					<form
-						onSubmit={handleSearch}
-						className="flex flex-col justify-center w-full gap-3 sm:flex-row sm:items-center sm:flex-1">
-						<h3 className="hidden text-xl font-bold text-white dark:text-gray-100 sm:block sm:text-2xl sm:whitespace-nowrap">
-							Search
-						</h3>
-						<input
-							type="text"
-							value={searchWord}
-							onChange={(e) => setSearchWord(e.target.value)}
-							placeholder="Enter search term (e.g., 09-118)"
-							className="w-full p-3 border border-gray-300 rounded-md outline-none dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white sm:flex-1 sm:max-w-md"
-							disabled={loading}
-						/>
+			{!loading && results.length === 0 && searchWord && !error && (
+				<div className="mt-8 text-center text-gray-600 dark:text-gray-400">
+					No results found. Try a different search term.
+				</div>
+			)}
+
+			{/* Image Modal */}
+			{modalImage && (
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center bg-black/5 backdrop-blur-sm"
+					onClick={() => setModalImage(null)}>
+					<div className="relative max-w-4xl max-h-[90vh] p-4">
+						{/* Close button */}
 						<button
-							type="submit"
-							disabled={loading}
-							className="w-full px-6 py-3 font-semibold text-white transition-colors duration-200 bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto sm:whitespace-nowrap">
-							{"Search"}
+							onClick={() => setModalImage(null)}
+							className="absolute z-10 p-2 text-white transition-all rounded-full cursor-pointer top-2 right-2 bg-black/75 hover:bg-black">
+							<X className="w-6 h-6" />
 						</button>
-					</form>
-
-					{/* Desktop: Translate button */}
-					<div className="items-center justify-end hidden gap-2 sm:flex sm:w-fit">
-						{lastScraped && (
-							<span className="text-xs text-gray-300 dark:text-gray-400 whitespace-nowrap notranslate">
-								Updated: {new Date(lastScraped).toLocaleDateString()}{" "}
-								{new Date(lastScraped).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-							</span>
-						)}
-						<div className="relative notranslate" ref={translateDropdownRef}>
-							<button
-								onClick={() => setShowTranslateDropdown(!showTranslateDropdown)}
-								className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 notranslate">
-								<Languages className="w-4 h-4" />
-								<span className="notranslate">Translate</span>
-							</button>
-							{showTranslateDropdown && (
-								<div className="absolute right-0 z-50 w-48 mt-2 bg-white border border-gray-200 rounded-md shadow-lg dark:bg-gray-800 dark:border-gray-700 notranslate">
-									<button
-										onClick={() => triggerTranslate("ja")}
-										className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
-										Japanese
-									</button>
-									<button
-										onClick={() => triggerTranslate("en")}
-										className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 notranslate">
-										English
-									</button>
-								</div>
-							)}
-						</div>
-						{/* Google Translate Widget (positioned off-screen but functional) */}
-						<div
-							id="google_translate_element"
-							style={{
-								position: "fixed",
-								top: "-1000px",
-								left: "-1000px",
-								width: "1px",
-								height: "1px",
-								opacity: 0,
-								zIndex: -1,
-							}}></div>
+						{/* Full size image */}
+						<img
+							src={modalImage}
+							alt="Card image full size"
+							className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+							onClick={(e) => e.stopPropagation()}
+						/>
 					</div>
 				</div>
-
-				{error && (
-					<div className="p-4 mb-4 text-red-700 bg-red-100 border border-red-400 rounded-md dark:bg-red-900 dark:border-red-700 dark:text-red-200">
-						{error}
-					</div>
-				)}
-
-				{loading && (
-					<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-						{Array.from({ length: 6 }).map((_, index) => (
-							<Card key={index} isLoading={true} exchangeRate={exchangeRate} onImageClick={() => {}} />
-						))}
-					</div>
-				)}
-
-				{!loading && results.length > 0 && (
-					<div className="space-y-8">
-						{sortedGroups.map(([prefix, groupResults]) => (
-							<div key={prefix} className="space-y-4">
-								{/* Group Header */}
-								<div className="sticky z-10 px-4 py-3 text-white bg-indigo-600 rounded-lg shadow-md top-4 dark:bg-indigo-800">
-									<h2 className="text-xl font-bold">{prefix.replace(/-/g, "–")}</h2>
-									<p className="text-sm text-indigo-100 dark:text-indigo-200">
-										{groupResults.length} {groupResults.length === 1 ? "card" : "cards"}
-									</p>
-								</div>
-								{/* Group Cards */}
-								<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-									{groupResults.map((result, index) => (
-										<Card
-											key={`${prefix}-${index}`}
-											result={result}
-											exchangeRate={exchangeRate}
-											onImageClick={(imageUrl) => setModalImage(imageUrl)}
-										/>
-									))}
-								</div>
-							</div>
-						))}
-					</div>
-				)}
-
-				{!loading && results.length === 0 && searchWord && !error && (
-					<div className="mt-8 text-center text-gray-600 dark:text-gray-400">
-						No results found. Try a different search term.
-					</div>
-				)}
-
-				{/* Image Modal */}
-				{modalImage && (
-					<div
-						className="fixed inset-0 z-50 flex items-center justify-center bg-black/5 backdrop-blur-sm"
-						onClick={() => setModalImage(null)}>
-						<div className="relative max-w-4xl max-h-[90vh] p-4">
-							{/* Close button */}
-							<button
-								onClick={() => setModalImage(null)}
-								className="absolute z-10 p-2 text-white transition-all rounded-full cursor-pointer top-2 right-2 bg-black/75 hover:bg-black">
-								<X className="w-6 h-6" />
-							</button>
-							{/* Full size image */}
-							<img
-								src={modalImage}
-								alt="Card image full size"
-								className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-								onClick={(e) => e.stopPropagation()}
-							/>
-						</div>
-					</div>
-				)}
-			</div>
-		</div>
+			)}
+		</>
 	);
 }
 

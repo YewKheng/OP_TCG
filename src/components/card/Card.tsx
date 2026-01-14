@@ -60,30 +60,30 @@ const Card: React.FC<CardProps> = ({ result, exchangeRate, onImageClick, isLoadi
 	// Skeleton loading state
 	if (isLoading || !result) {
 		return (
-			<div className="flex flex-col items-center justify-start p-4 transition-shadow bg-white rounded-lg shadow-lg dark:bg-gray-800 animate-pulse">
+			<div className="flex flex-col items-center justify-start p-4 transition-shadow rounded-lg shadow-lg bg-gray-700 animate-pulse">
 				{/* Skeleton Image */}
-				<div className="w-50 h-60 mb-3 rounded-md bg-gray-300 dark:bg-gray-700" />
+				<div className="w-[75%] h-46 mb-3 rounded-md bg-gray-500" />
 
 				{/* Skeleton Card Number */}
-				<div className="w-24 h-4 mb-1 rounded bg-gray-300 dark:bg-gray-700" />
+				<div className="w-24 h-4 mb-1 rounded bg-gray-500" />
 
 				{/* Skeleton Name */}
 				<div className="flex flex-col items-center justify-center text-center mb-2">
-					<div className="w-48 h-6 mb-1 rounded bg-gray-300 dark:bg-gray-700" />
-					<div className="w-40 h-4 rounded bg-gray-300 dark:bg-gray-700" />
+					<div className="w-48 h-6 mb-1 rounded bg-gray-500" />
+					<div className="w-40 h-4 rounded bg-gray-500" />
 				</div>
 
 				{/* Skeleton Color */}
-				<div className="mb-2 w-20 h-4 rounded bg-gray-300 dark:bg-gray-700" />
+				<div className="mb-2 w-20 h-4 rounded bg-gray-500" />
 
 				{/* Skeleton Price */}
 				<div className="mb-2 flex flex-col items-center justify-center">
-					<div className="w-24 h-6 mb-1 rounded bg-gray-300 dark:bg-gray-700" />
-					<div className="w-20 h-4 rounded bg-gray-300 dark:bg-gray-700" />
+					<div className="w-24 h-6 mb-1 rounded bg-gray-500" />
+					<div className="w-20 h-4 rounded bg-gray-500" />
 				</div>
 
 				{/* Skeleton Link */}
-				<div className="w-28 h-4 rounded bg-gray-300 dark:bg-gray-700" />
+				<div className="w-28 h-4 rounded bg-gray-500" />
 			</div>
 		);
 	}
@@ -101,7 +101,7 @@ const Card: React.FC<CardProps> = ({ result, exchangeRate, onImageClick, isLoadi
 		: undefined;
 
 	return (
-		<div className="flex flex-col items-center justify-start p-4 transition-shadow bg-white rounded-lg shadow-lg dark:bg-gray-800 hover:shadow-xl">
+		<div className="flex flex-col items-center justify-start p-4 transition-shadow bg-indigo-600/75 rounded-lg shadow-lg hover:shadow-xl">
 			{result.image && imageUrl && (
 				<img
 					src={imageUrl}
@@ -114,33 +114,29 @@ const Card: React.FC<CardProps> = ({ result, exchangeRate, onImageClick, isLoadi
 					loading="lazy"
 				/>
 			)}
-			{result.cardNumber && <p className="mb-1 text-sm text-gray-500 dark:text-gray-400">Card: {result.cardNumber}</p>}
+			{result.cardNumber && (
+				<p className="text-sm text-white border border-white rounded-md px-2 py-px">{result.cardNumber}</p>
+			)}
 			{result.name && (
-				<div className="flex flex-col items-center justify-center text-center">
-					<h4 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">{result.name}</h4>
+				<div className="flex flex-col items-center justify-center text-center pt-2">
+					<h4 className="mb-1 text-lg font-semibold text-white">{result.name}</h4>
 				</div>
 			)}
-			<div className="mb-2 space-y-1 text-sm text-gray-600 dark:text-gray-300">
+			<div className="mb-2 space-y-1 text-sm text-white">
 				{result.color && (
-					<p>
-						<span className="font-medium">Color:</span> {translateColor(result.color)}
+					<p className="text-indigo-100">
+						<span>Color:</span> {translateColor(result.color)}
 					</p>
 				)}
 			</div>
 			{result.price && (
 				<div className="mb-2 flex flex-col items-center justify-center">
-					<p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
-						{convertToMYR(result.price, exchangeRate)}
-					</p>
-					<p className="text-sm text-gray-500 dark:text-gray-400">{result.price}</p>
+					<p className="text-xl font-bold text-white">{convertToMYR(result.price, exchangeRate)}</p>
+					<p className="text-sm text-indigo-100">{result.price}</p>
 				</div>
 			)}
 			{result.link && linkUrl && (
-				<a
-					href={linkUrl}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
+				<a href={linkUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-white/50 hover:underline">
 					View Details →
 				</a>
 			)}

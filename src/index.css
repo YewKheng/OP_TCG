@@ -1,20 +1,26 @@
 @import "tailwindcss";
 
-:root {
-	--color-blue: #5da9e9;
-	--color-teal: #6ed3b2;
-	--color-yellow: #ffd84d;
-	--color-red: #ff8a7a;
-	--color-black: #333333;
-	--color-grey: #d9d9d9;
+html,
+body,
+#root {
+	height: 100%;
+	min-height: 100vh;
+	margin: 0;
+	padding: 0;
 }
 
 body {
-	background: linear-gradient(to bottom right, #111827, #1f2937);
+	background: linear-gradient(to bottom right, #5da9e9, #6ed3b2);
+	background-attachment: fixed;
+}
+
+#root {
+	width: 100%;
 }
 
 @theme {
 	--animate-spin-slow: spin 20s linear infinite;
+	--color-grey: #d9d9d9;
 }
 /* Google Translate Widget Styling - Make it functional but invisible */
 #google_translate_element {
@@ -60,15 +66,9 @@ iframe[src*="te_bk.gif"] {
 /* Don't hide all translate iframes - some are needed for functionality */
 body[style*="translate.googleapis.com"] {
 	background-image: none !important;
-	background: none !important;
-}
-
-/* Remove background image from body */
-body {
-	top: 0px !important;
-	background-image: none !important;
-	/* Keep gradient background */
-	background: linear-gradient(to bottom right, #111827, #1f2937) !important;
+	/* Keep gradient background even with translate widget */
+	background: linear-gradient(to bottom right, #5da9e9, #6ed3b2) !important;
+	background-attachment: fixed !important;
 }
 
 /* Only hide the banner iframe, not all translate iframes */
