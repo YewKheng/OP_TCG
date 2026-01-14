@@ -277,9 +277,7 @@ function SearchPage() {
 			)}
 
 			{!loading && results.length === 0 && searchWord && !error && (
-				<div className="mt-8 text-center text-gray-600 dark:text-gray-400">
-					No results found. Try a different search term.
-				</div>
+				<div className="mt-8 text-center text-gray-600">No results found. Try a different search term.</div>
 			)}
 
 			{/* Image Modal */}
