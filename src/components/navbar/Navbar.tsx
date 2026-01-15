@@ -139,17 +139,18 @@ const Navbar = () => {
 							{location.pathname === "/search" && (
 								<button
 									onClick={() => setShowSortModal(true)}
-									className="flex items-center gap-1 px-3 py-2 text-xs font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
+									className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md cursor-pointer hover:bg-gray-300">
+									<span>Sort:</span>
 									<span className="font-semibold">
 										{sortBy === "rarity"
-											? "Sort"
-											: sortBy === "priceLow"
-											? "Price ↑"
+											? "Rarity"
 											: sortBy === "priceHigh"
 											? "Price ↓"
-											: sortBy === "cardNumberLow"
-											? "Card ↑"
-											: "Card ↓"}
+											: sortBy === "priceLow"
+											? "Price ↑"
+											: sortBy === "cardNumberHigh"
+											? "Card ↓"
+											: "Card ↑"}
 									</span>
 								</button>
 							)}
@@ -202,7 +203,7 @@ const Navbar = () => {
 						/>
 						<button
 							type="submit"
-							className="px-6 font-semibold text-white transition-colors duration-200 bg-indigo-600 rounded-md hover:bg-indigo-700 whitespace-nowrap drop-shadow-lg">
+							className="px-6 font-semibold text-white transition-colors duration-200 bg-blue-600 rounded-md hover:bg-blue-800 whitespace-nowrap drop-shadow-lg cursor-pointer">
 							Search
 						</button>
 					</form>
@@ -213,18 +214,18 @@ const Navbar = () => {
 						{location.pathname === "/search" && (
 							<button
 								onClick={() => setShowSortModal(true)}
-								className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
+								className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md cursor-pointer hover:bg-gray-300">
 								<span>Sort:</span>
 								<span className="font-semibold">
 									{sortBy === "rarity"
-										? "Sort"
-										: sortBy === "priceLow"
-										? "Price (Low to High)"
+										? "Rarity"
 										: sortBy === "priceHigh"
 										? "Price (High to Low)"
-										: sortBy === "cardNumberLow"
-										? "Card Number (Low to High)"
-										: "Card Number (High to Low)"}
+										: sortBy === "priceLow"
+										? "Price (Low to High)"
+										: sortBy === "cardNumberHigh"
+										? "Card Number (High to Low)"
+										: "Card Number (Low to High)"}
 								</span>
 							</button>
 						)}
@@ -232,7 +233,7 @@ const Navbar = () => {
 						<div className="relative cursor-pointer notranslate" ref={translateDropdownRef}>
 							<button
 								onClick={() => setShowTranslateDropdown(!showTranslateDropdown)}
-								className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-300 notranslate">
+								className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-300 notranslate cursor-pointer">
 								<Languages className="w-4 h-4" />
 								<span className="notranslate">Translate</span>
 							</button>
@@ -287,7 +288,7 @@ const Navbar = () => {
 							animate={{ y: 0 }}
 							exit={{ y: "100%" }}
 							transition={{ type: "spring", damping: 25, stiffness: 200 }}
-							className="fixed bottom-0 left-0 right-0 z-50 bg-white shadow-2xl rounded-t-3xl"
+							className="fixed bottom-0 left-0 right-0 z-50 bg-white shadow-2xl rounded-t-3xl max-w-6xl mx-auto"
 							onClick={(e: React.MouseEvent) => e.stopPropagation()}>
 							{/* Handle bar */}
 							<div className="flex justify-center pt-3 pb-2">
@@ -306,10 +307,10 @@ const Navbar = () => {
 							<div className="px-6 py-4 space-y-2">
 								<button
 									onClick={() => handleSortChange("rarity")}
-									className={`w-full flex items-center justify-between px-4 py-3 text-left rounded-lg transition-colors ${
+									className={`w-full flex items-center justify-between px-4 py-3 text-left rounded-lg transition-colors cursor-pointer ${
 										sortBy === "rarity"
 											? "bg-indigo-100 text-indigo-700 font-semibold"
-											: "bg-gray-50 text-gray-700 hover:bg-gray-100"
+											: "bg-gray-50 text-gray-700 hover:bg-gray-200"
 									}`}>
 									<div className="flex items-center gap-3">
 										<Gem className="w-5 h-5" />
@@ -318,24 +319,11 @@ const Navbar = () => {
 									{sortBy === "rarity" && <div className="w-2 h-2 bg-indigo-700 rounded-full" />}
 								</button>
 								<button
-									onClick={() => handleSortChange("priceLow")}
-									className={`w-full flex items-center justify-between px-4 py-3 text-left rounded-lg transition-colors ${
-										sortBy === "priceLow"
-											? "bg-indigo-100 text-indigo-700 font-semibold"
-											: "bg-gray-50 text-gray-700 hover:bg-gray-100"
-									}`}>
-									<div className="flex items-center gap-3">
-										<BanknoteArrowUp className="w-5 h-5" />
-										<span>Price (Low to High)</span>
-									</div>
-									{sortBy === "priceLow" && <div className="w-2 h-2 bg-indigo-700 rounded-full" />}
-								</button>
-								<button
 									onClick={() => handleSortChange("priceHigh")}
-									className={`w-full flex items-center justify-between px-4 py-3 text-left rounded-lg transition-colors ${
+									className={`w-full flex items-center justify-between px-4 py-3 text-left rounded-lg transition-colors cursor-pointer ${
 										sortBy === "priceHigh"
 											? "bg-indigo-100 text-indigo-700 font-semibold"
-											: "bg-gray-50 text-gray-700 hover:bg-gray-100"
+											: "bg-gray-50 text-gray-700 hover:bg-gray-200"
 									}`}>
 									<div className="flex items-center gap-3">
 										<BanknoteArrowDown className="w-5 h-5" />
@@ -344,30 +332,43 @@ const Navbar = () => {
 									{sortBy === "priceHigh" && <div className="w-2 h-2 bg-indigo-700 rounded-full" />}
 								</button>
 								<button
-									onClick={() => handleSortChange("cardNumberLow")}
-									className={`w-full flex items-center justify-between px-4 py-3 text-left rounded-lg transition-colors ${
-										sortBy === "cardNumberLow"
+									onClick={() => handleSortChange("priceLow")}
+									className={`w-full flex items-center justify-between px-4 py-3 text-left rounded-lg transition-colors cursor-pointer ${
+										sortBy === "priceLow"
 											? "bg-indigo-100 text-indigo-700 font-semibold"
-											: "bg-gray-50 text-gray-700 hover:bg-gray-100"
+											: "bg-gray-50 text-gray-700 hover:bg-gray-200"
 									}`}>
 									<div className="flex items-center gap-3">
-										<ArrowUp10 className="w-5 h-5" />
-										<span>Card Number (Low to High)</span>
+										<BanknoteArrowUp className="w-5 h-5" />
+										<span>Price (Low to High)</span>
 									</div>
-									{sortBy === "cardNumberLow" && <div className="w-2 h-2 bg-indigo-700 rounded-full" />}
+									{sortBy === "priceLow" && <div className="w-2 h-2 bg-indigo-700 rounded-full" />}
 								</button>
 								<button
 									onClick={() => handleSortChange("cardNumberHigh")}
-									className={`w-full flex items-center justify-between px-4 py-3 text-left rounded-lg transition-colors ${
+									className={`w-full flex items-center justify-between px-4 py-3 text-left rounded-lg transition-colors cursor-pointer ${
 										sortBy === "cardNumberHigh"
 											? "bg-indigo-100 text-indigo-700 font-semibold"
-											: "bg-gray-50 text-gray-700 hover:bg-gray-100"
+											: "bg-gray-50 text-gray-700 hover:bg-gray-200"
 									}`}>
 									<div className="flex items-center gap-3">
 										<ArrowDown10 className="w-5 h-5" />
 										<span>Card Number (High to Low)</span>
 									</div>
 									{sortBy === "cardNumberHigh" && <div className="w-2 h-2 bg-indigo-700 rounded-full" />}
+								</button>
+								<button
+									onClick={() => handleSortChange("cardNumberLow")}
+									className={`w-full flex items-center justify-between px-4 py-3 text-left rounded-lg transition-colors cursor-pointer ${
+										sortBy === "cardNumberLow"
+											? "bg-indigo-100 text-indigo-700 font-semibold"
+											: "bg-gray-50 text-gray-700 hover:bg-gray-200"
+									}`}>
+									<div className="flex items-center gap-3">
+										<ArrowUp10 className="w-5 h-5" />
+										<span>Card Number (Low to High)</span>
+									</div>
+									{sortBy === "cardNumberLow" && <div className="w-2 h-2 bg-indigo-700 rounded-full" />}
 								</button>
 							</div>
 							<div className="pb-6" />

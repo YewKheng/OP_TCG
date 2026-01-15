@@ -150,8 +150,11 @@ function getSetValue(searchWord: string): string {
 // Main scraping function
 async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 	console.log(`\n🚀 Scraping search term: "${searchWord}"`);
-	const url = `https://yuyu-tei.jp/sell/opc/s/search?search_word=&vers[]=${encodeURIComponent(
-		searchWord
+	// const url = `https://yuyu-tei.jp/sell/opc/s/search?search_word=&vers[]=${encodeURIComponent(
+	// 	searchWord
+	// )}&rare=&type=&kizu=0`;
+	const url = `https://yuyu-tei.jp/sell/poc/s/search?search_word=&vers[]=${encodeURIComponent(
+		"m02a"
 	)}&rare=&type=&kizu=0`;
 
 	const setValue = getSetValue(searchWord);
