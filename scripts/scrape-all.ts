@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /**
  * Scrape multiple common search terms
- * Useful for initial data population or daily updates
  */
 
 import * as path from "path";
@@ -12,25 +11,25 @@ const SCRAPE_SCRIPT = path.join(process.cwd(), "scripts", "scrape.ts");
 // Generate search terms - using lowercase to match vers[] parameter format
 const COMMON_SEARCH_TERMS: string[] = [];
 
-// OP01 to OP14 (lowercase: op01 to op14)
+// OP01 to OP14
 for (let i = 1; i <= 14; i++) {
 	const num = i.toString().padStart(2, "0");
 	COMMON_SEARCH_TERMS.push(`op${num}`);
 }
 
-// PRB01 to PRB02 (lowercase: prb01 to prb02)
+// PRB01 to PRB02
 for (let i = 1; i <= 2; i++) {
 	const num = i.toString().padStart(2, "0");
 	COMMON_SEARCH_TERMS.push(`prb${num}`);
 }
 
-// ST01 to ST29 (lowercase: st01 to st29)
+// ST01 to ST29
 for (let i = 1; i <= 29; i++) {
 	const num = i.toString().padStart(2, "0");
 	COMMON_SEARCH_TERMS.push(`st${num}`);
 }
 
-// EB01 to EB04 (lowercase: eb01 to eb04)
+// EB01 to EB04
 for (let i = 1; i <= 4; i++) {
 	const num = i.toString().padStart(2, "0");
 	COMMON_SEARCH_TERMS.push(`eb${num}`);
@@ -53,7 +52,6 @@ async function scrapeAll() {
 	console.log(`  - st01 to st29: 29 terms`);
 	console.log(`  - eb01 to eb04: 4 terms`);
 	console.log(`  - promo cards: 6 terms (promo-100, promo-200, promo-op10, promo-op20, promo-st10, promo-eb10)`);
-	console.log(`\nThis will take a while. Each term takes ~2-10 minutes depending on card count.\n`);
 
 	let successCount = 0;
 	let failCount = 0;
@@ -77,7 +75,7 @@ async function scrapeAll() {
 			console.log(`${progress} ✅ Completed: ${searchTerm}`);
 			successCount++;
 
-			// Add longer delay between searches to avoid rate limiting (except for the last one)
+			// Add delay between searches to avoid rate limiting (except for the last one)
 			if (i < COMMON_SEARCH_TERMS.length - 1) {
 				const delay = 5000 + Math.random() * 3000; // 5-8 seconds between searches
 				console.log(`⏳ Waiting ${Math.round(delay / 1000)}s before next scrape...`);

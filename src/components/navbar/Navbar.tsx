@@ -9,6 +9,7 @@ const Navbar = () => {
 	const [searchWord, setSearchWord] = useState("");
 	const [showTranslateDropdown, setShowTranslateDropdown] = useState(false);
 	const [showTranslateDropdownMobile, setShowTranslateDropdownMobile] = useState(false);
+	const [isScrolled, setIsScrolled] = useState(false);
 	const translateDropdownRef = useRef<HTMLDivElement>(null);
 	const translateDropdownRefMobile = useRef<HTMLDivElement>(null);
 	const navigate = useNavigate();
@@ -19,9 +20,27 @@ const Navbar = () => {
 		const params = new URLSearchParams(location.search);
 		const query = params.get("q");
 		if (query) {
-			setSearchWord(query);
+			setTimeout(() => {
+				setSearchWord(query);
+			}, 0);
 		}
 	}, [location.search]);
+
+	// Track scroll position to add background when scrolled
+	useEffect(() => {
+		const handleScroll = () => {
+			const scrollY = window.scrollY;
+			setIsScrolled(scrollY > 0);
+		};
+
+		window.addEventListener("scroll", handleScroll);
+		// Check initial scroll position
+		handleScroll();
+
+		return () => {
+			window.removeEventListener("scroll", handleScroll);
+		};
+	}, []);
 
 	// Close dropdown when clicking outside (desktop)
 	useEffect(() => {
@@ -82,7 +101,10 @@ const Navbar = () => {
 	};
 
 	return (
-		<nav className="w-full py-4 mb-8">
+		<nav
+			className={`sticky top-0 z-20 w-full px-4 py-2 mb-8 backdrop-blur-xs transition-colors duration-200 ${
+				isScrolled ? "bg-black/10 drop-shadow-2xl" : ""
+			}`}>
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				{/* Logo/Brand */}
 				<div className="flex items-center justify-between w-full sm:w-auto">
@@ -90,10 +112,10 @@ const Navbar = () => {
 						<img src={cincaiLogo} alt="Cincai Logo" className="w-24 h-auto" />
 					</a>
 					{/* Mobile: Translate button */}
-					<div className="relative sm:hidden notranslate cursor-pointer" ref={translateDropdownRefMobile}>
+					<div className="relative cursor-pointer sm:hidden notranslate" ref={translateDropdownRefMobile}>
 						<button
 							onClick={() => setShowTranslateDropdownMobile(!showTranslateDropdownMobile)}
-							className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-300 notranslate">
+							className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 transition-colors bg-white rounded-md hover:bg-gray-300 notranslate">
 							<Languages className="w-4 h-4" />
 							<span className="notranslate">Translate</span>
 						</button>
@@ -111,7 +133,6 @@ const Navbar = () => {
 								</button>
 							</div>
 						)}
-						{/* Google Translate Widget (positioned off-screen but functional) */}
 						<div
 							id="google_translate_element_mobile"
 							style={{
@@ -133,7 +154,7 @@ const Navbar = () => {
 						value={searchWord}
 						onChange={(e) => setSearchWord(e.target.value)}
 						placeholder="Enter search term (e.g., 09-118)"
-						className="flex-1 p-3 border border-gray-300 rounded-md outline-none bg-white text-black drop-shadow-lg"
+						className="flex-1 p-3 text-black bg-white border border-gray-300 rounded-md outline-none drop-shadow-lg"
 					/>
 					<button
 						type="submit"
@@ -143,7 +164,7 @@ const Navbar = () => {
 				</form>
 
 				{/* Desktop: Translate button */}
-				<div className="hidden sm:block cursor-pointer">
+				<div className="hidden cursor-pointer sm:block">
 					<div className="relative notranslate" ref={translateDropdownRef}>
 						<button
 							onClick={() => setShowTranslateDropdown(!showTranslateDropdown)}
@@ -166,7 +187,6 @@ const Navbar = () => {
 							</div>
 						)}
 					</div>
-					{/* Google Translate Widget (positioned off-screen but functional) */}
 					<div
 						id="google_translate_element"
 						style={{

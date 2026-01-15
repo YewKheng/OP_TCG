@@ -43,7 +43,7 @@ const translateColor = (color: string | undefined): string => {
 const convertToMYR = (priceString: string | undefined, exchangeRate: number): string => {
 	if (!priceString) return "";
 
-	// Extract numeric value from price string (e.g., "680円" or "2,480円")
+	// Extract numeric value from price string
 	const numericValue = priceString.replace(/[^\d,]/g, "").replace(/,/g, "");
 	const jpyAmount = parseFloat(numericValue);
 
@@ -60,30 +60,30 @@ const Card: React.FC<CardProps> = ({ result, exchangeRate, onImageClick, isLoadi
 	// Skeleton loading state
 	if (isLoading || !result) {
 		return (
-			<div className="flex flex-col items-center justify-start p-4 transition-shadow rounded-lg shadow-lg bg-gray-700 animate-pulse">
+			<div className="flex flex-col items-center justify-start p-4 transition-shadow bg-gray-700 rounded-lg shadow-lg animate-pulse">
 				{/* Skeleton Image */}
 				<div className="w-[75%] h-46 mb-3 rounded-md bg-gray-500" />
 
 				{/* Skeleton Card Number */}
-				<div className="w-24 h-4 mb-1 rounded bg-gray-500" />
+				<div className="w-24 h-4 mb-1 bg-gray-500 rounded" />
 
 				{/* Skeleton Name */}
-				<div className="flex flex-col items-center justify-center text-center mb-2">
-					<div className="w-48 h-6 mb-1 rounded bg-gray-500" />
-					<div className="w-40 h-4 rounded bg-gray-500" />
+				<div className="flex flex-col items-center justify-center mb-2 text-center">
+					<div className="w-48 h-6 mb-1 bg-gray-500 rounded" />
+					<div className="w-40 h-4 bg-gray-500 rounded" />
 				</div>
 
 				{/* Skeleton Color */}
-				<div className="mb-2 w-20 h-4 rounded bg-gray-500" />
+				<div className="w-20 h-4 mb-2 bg-gray-500 rounded" />
 
 				{/* Skeleton Price */}
-				<div className="mb-2 flex flex-col items-center justify-center">
-					<div className="w-24 h-6 mb-1 rounded bg-gray-500" />
-					<div className="w-20 h-4 rounded bg-gray-500" />
+				<div className="flex flex-col items-center justify-center mb-2">
+					<div className="w-24 h-6 mb-1 bg-gray-500 rounded" />
+					<div className="w-20 h-4 bg-gray-500 rounded" />
 				</div>
 
 				{/* Skeleton Link */}
-				<div className="w-28 h-4 rounded bg-gray-500" />
+				<div className="h-4 bg-gray-500 rounded w-28" />
 			</div>
 		);
 	}
@@ -101,7 +101,7 @@ const Card: React.FC<CardProps> = ({ result, exchangeRate, onImageClick, isLoadi
 		: undefined;
 
 	return (
-		<div className="flex flex-col items-center justify-start p-4 transition-shadow bg-grey/75 rounded-lg shadow-lg hover:shadow-xl hover:scale-105">
+		<div className="flex flex-col items-center justify-start p-4 transition-shadow rounded-lg shadow-lg bg-grey/75 hover:shadow-xl hover:scale-105">
 			{result.image && imageUrl && (
 				<img
 					src={imageUrl}
@@ -115,26 +115,26 @@ const Card: React.FC<CardProps> = ({ result, exchangeRate, onImageClick, isLoadi
 				/>
 			)}
 			{result.cardNumber && (
-				<p className="text-sm text-black font-semibold border-2 border-black rounded-md px-2 py-px">
+				<p className="px-2 py-px text-sm font-semibold text-black border-2 border-black rounded-md">
 					{result.cardNumber}
 				</p>
 			)}
 			{result.name && (
-				<div className="flex flex-col items-center justify-center text-center pt-2">
+				<div className="flex flex-col items-center justify-center pt-2 text-center">
 					<h4 className="mb-1 text-lg font-bold text-black">{result.name}</h4>
 				</div>
 			)}
 			<div className="mb-2 space-y-1 text-sm text-white">
 				{result.color && (
-					<p className="text-black font-medium">
+					<p className="font-medium text-black">
 						<span>Color:</span> {translateColor(result.color)}
 					</p>
 				)}
 			</div>
 			{result.price && (
-				<div className="mb-2 flex flex-col items-center justify-center">
+				<div className="flex flex-col items-center justify-center mb-2">
 					<p className="text-xl font-bold text-black">{convertToMYR(result.price, exchangeRate)}</p>
-					<p className="text-sm text-black font-semibold">{result.price}</p>
+					<p className="text-sm font-semibold text-black">{result.price}</p>
 				</div>
 			)}
 			{result.link && linkUrl && (

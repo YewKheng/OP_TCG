@@ -139,19 +139,19 @@ const Banner: React.FC<BannerProps> = ({ isLoading = false }) => {
 	if (isLoading) {
 		return (
 			<div className="space-y-4">
-				<div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+				<div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
 					{Array.from({ length: 20 }).map((_, index) => (
 						<div key={index} className="p-4 bg-gray-700 rounded-lg shadow-md animate-pulse">
 							{/* Skeleton Banner Image */}
-							<div className="aspect-2/1 object-cover mb-1 rounded w-full h-auto bg-gray-500" />
+							<div className="object-cover w-full h-auto mb-1 bg-gray-500 rounded aspect-2/1" />
 							{/* Skeleton Set Name */}
-							<div className="w-32 h-6 mb-1 rounded bg-gray-500" />
+							<div className="w-32 h-6 mb-1 bg-gray-500 rounded" />
 							{/* Skeleton Set Key */}
-							<div className="w-16 h-4 mb-1 rounded bg-gray-500" />
+							<div className="w-16 h-4 mb-1 bg-gray-500 rounded" />
 							{/* Skeleton Count */}
-							<div className="w-20 h-4 mb-1 rounded bg-gray-500" />
+							<div className="w-20 h-4 mb-1 bg-gray-500 rounded" />
 							{/* Skeleton Last Scraped */}
-							<div className="w-24 h-3 rounded bg-gray-500" />
+							<div className="w-24 h-3 bg-gray-500 rounded" />
 						</div>
 					))}
 				</div>
@@ -162,7 +162,7 @@ const Banner: React.FC<BannerProps> = ({ isLoading = false }) => {
 	return (
 		<div className="space-y-4">
 			{/* Map through all sets */}
-			<div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+			<div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
 				{sets.map((setKey) => {
 					const setData = data[setKey];
 					const bannerImage = bannerMap[setKey.toLowerCase()];
@@ -172,20 +172,25 @@ const Banner: React.FC<BannerProps> = ({ isLoading = false }) => {
 						<div
 							key={setKey}
 							onClick={() => handleSetClick(setKey)}
-							className="p-4 bg-grey/75 rounded-lg shadow-md cursor-pointer transition-all hover:shadow-lg hover:scale-105">
+							className="p-4 transition-all rounded-lg shadow-md cursor-pointer bg-grey/75 hover:shadow-lg hover:scale-105">
 							{bannerImage && (
 								<img
 									src={bannerImage}
 									alt={`${setKey} Banner`}
-									className="aspect-2/1 object-cover mb-1 rounded w-full h-auto object-top"
+									className="object-cover object-top w-full h-auto mb-1 rounded aspect-2/1"
 								/>
 							)}
-							<h3 className="text-lg font-bold text-black mb-1">{setName}</h3>
-							<p className="text-sm font-semibold text-black mb-1">{setKey.toUpperCase()}</p>
-							<p className="text-sm text-black font-medium">Count: {setData.count}</p>
+							<h3 className="mb-1 text-lg font-bold text-black">{setName}</h3>
+							<p className="mb-1 text-sm font-semibold text-black">{setKey.toUpperCase()}</p>
+							<p className="text-sm font-medium text-black">Count: {setData.count}</p>
 							<p className="text-xs text-gray-900/75">
-								Last scraped: {new Date(setData.lastScraped).toLocaleDateString()}{" "}
-								{new Date(setData.lastScraped).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+								Last update:{" "}
+								{new Date(setData.lastScraped).toLocaleDateString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })}{" "}
+								{new Date(setData.lastScraped).toLocaleTimeString("en-MY", {
+									hour: "2-digit",
+									minute: "2-digit",
+									timeZone: "Asia/Kuala_Lumpur",
+								})}
 							</p>
 						</div>
 					);

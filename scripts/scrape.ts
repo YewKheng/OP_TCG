@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 /**
- * Standalone scraping script for yuyu-tei.jp
- * Run manually to update cached data
- *
  * Usage:
  *   npm run scrape <search_term>
  *   npm run scrape:all  (scrapes all common search terms)
@@ -480,12 +477,10 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 		}
 
 		// Filter results
-		// For promo cards, card numbers might only be available on individual pages
-		// So we allow cards with valid links to pass through, even without card numbers initially
 		const filteredResults = results.filter((result) => {
 			const hasLink = result.link && result.link.trim() !== "";
 			const hasValidLink = hasLink && (result.link!.includes("opc/card") || result.link!.includes("/promo"));
-			// Allow cards with valid links, even if card number isn't found yet (will be scraped from individual page)
+			// Allow cards with valid links, even if card number isn't found yet
 			return hasValidLink;
 		});
 
@@ -553,7 +548,6 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 			}
 		}
 
-		// No filtering needed - vers[] parameter in URL already filters results server-side
 		const finalResults = detailedResults;
 
 		const cardsWithoutCardNumber = finalResults.filter((r) => !r.cardNumber || r.cardNumber.trim() === "").length;

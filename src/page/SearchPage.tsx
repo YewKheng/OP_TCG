@@ -13,16 +13,46 @@ interface SearchResult {
 	[key: string]: unknown;
 }
 
-// Function to get JPY to MYR exchange rate
+// Function to get JPY to MYR exchange rate (cached for 12 hours)
 async function getExchangeRate(): Promise<number> {
+	const CACHE_KEY = "jpy_to_myr_rate";
+	const CACHE_TIMESTAMP_KEY = "jpy_to_myr_rate_timestamp";
+	const CACHE_DURATION = 12 * 60 * 60 * 1000;
+
+	// Check if we have a cached rate that's still valid
+	const cachedRate = localStorage.getItem(CACHE_KEY);
+	const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+
+	if (cachedRate && cachedTimestamp) {
+		const timestamp = parseInt(cachedTimestamp, 10);
+		const now = Date.now();
+		const age = now - timestamp;
+
+		// If cache is less than 12 hours old, use it
+		if (age < CACHE_DURATION) {
+			return parseFloat(cachedRate);
+		}
+	}
+
+	// Cache expired or doesn't exist, fetch new rate
 	try {
-		// Using exchangerate-api.com free endpoint (no API key required)
 		const response = await fetch("https://api.exchangerate-api.com/v4/latest/JPY");
 		const data = await response.json();
-		return data.rates?.MYR || 0.031; // Fallback to approximate rate if API fails
+		const rate = data.rates?.MYR || 0.031;
+
+		// Cache the new rate
+		localStorage.setItem(CACHE_KEY, rate.toString());
+		localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+
+		return rate;
 	} catch (error) {
 		console.error("Exchange rate error:", error);
-		return 0.031; // Approximate JPY to MYR rate (1 JPY ≈ 0.031 MYR)
+		// If API fails and we have old cache, use it even if expired
+		if (cachedRate) {
+			console.log("⚠️ API failed, using expired cache as fallback");
+			return parseFloat(cachedRate);
+		}
+		return 0.031; // Fallback to approximate rate
 	}
 }
 
@@ -124,7 +154,7 @@ function SearchPage() {
 				const rate = await getExchangeRate();
 				setExchangeRate(rate);
 
-				// Fetch from cached data API (only cached data is available)
+				// Fetch from cached data API
 				const response = await fetch(`/api/search?search_word=${encodeURIComponent(searchWord)}`);
 				const data: ApiResponse = await response.json();
 
@@ -159,14 +189,9 @@ function SearchPage() {
 		const trimmedName = name.trim();
 
 		// First, normalize "P R", "P L", "P SR", "P SEC", etc. to "P-R", "P-L", "P-SR", "P-SEC" for consistent display
-		// This handles cases where card names have spaces instead of dashes
 		const normalizedName = trimmedName.replace(/^P\s+([A-Z][A-Za-z]*)/, "P-$1");
 
 		// Match English letters and dashes at the start, before Japanese characters or space
-		// The pattern explicitly allows dashes within the prefix (e.g., "P-R", "P-SEC", "P-SR")
-		// Examples: "P-SEC", "P-SR", "SEC", "SR", "C", "R", "P-R", "P-L", etc.
-		// First try to match patterns with dashes (P-R, P-L, P-SEC, P-SR, etc.)
-
 		let prefixMatch = normalizedName.match(
 			/^([A-Za-z]+(?:-[A-Za-z]+)+)(?=\s|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/
 		);
@@ -179,7 +204,7 @@ function SearchPage() {
 			return prefixMatch[1];
 		}
 
-		// Handle names starting with dash (e.g., "- ドン!!カード" or "  - ドン!!カード")
+		// Handle names starting with dash, for DON cards
 		if (normalizedName.startsWith("-")) {
 			return "DON";
 		}
@@ -229,11 +254,15 @@ function SearchPage() {
 			{/* Search Results Header */}
 			{searchWord && (
 				<div className="mb-6">
-					<h2 className="text-2xl font-bold text-gray-900/75 mb-1">Search Results for: {searchWord}</h2>
+					<h2 className="mb-1 text-2xl font-bold text-gray-900/75">Search Results for: {searchWord}</h2>
 					{lastScraped && (
 						<span className="text-sm text-gray-900/75 notranslate">
-							Updated: {new Date(lastScraped).toLocaleDateString()}{" "}
-							{new Date(lastScraped).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+							Updated: {new Date(lastScraped).toLocaleDateString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })}{" "}
+							{new Date(lastScraped).toLocaleTimeString("en-MY", {
+								hour: "2-digit",
+								minute: "2-digit",
+								timeZone: "Asia/Kuala_Lumpur",
+							})}
 						</span>
 					)}
 				</div>
@@ -254,9 +283,9 @@ function SearchPage() {
 					{sortedGroups.map(([prefix, groupResults]) => (
 						<div key={prefix} className="space-y-4">
 							{/* Group Header */}
-							<div className="sticky z-10 px-4 py-3 text-black bg-grey rounded-lg shadow-md top-4">
+							<div className="px-4 py-3 text-black rounded-lg shadow-md  bg-grey top-4">
 								<h2 className="text-xl font-bold">{prefix.replace(/-/g, "–")}</h2>
-								<p className="text-sm text-black font-medium">
+								<p className="text-sm font-medium text-black">
 									{groupResults.length} {groupResults.length === 1 ? "card" : "cards"}
 								</p>
 							</div>
