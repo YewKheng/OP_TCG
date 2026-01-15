@@ -259,11 +259,20 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 				const link = $el.find("a").first().attr("href");
 
 				if (image || name) {
+					let processedImage = image;
+					if (processedImage) {
+						if (!processedImage.startsWith("http")) {
+							processedImage = `https://yuyu-tei.jp${processedImage}`;
+						}
+						// Replace 100_140 with front in the image URL
+						processedImage = processedImage.replace(/100_140/g, "front");
+					}
+
 					results.push({
 						name: name || undefined,
 						cardNumber: cardNumber || "-",
 						price: price || undefined,
-						image: image ? (image.startsWith("http") ? image : `https://yuyu-tei.jp${image}`) : undefined,
+						image: processedImage || undefined,
 						link: link ? (link.startsWith("http") ? link : `https://yuyu-tei.jp${link}`) : undefined,
 						rarity: rarity,
 						set: setValue,

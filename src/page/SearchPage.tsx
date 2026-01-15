@@ -69,6 +69,8 @@ interface ApiResponse {
 function SearchPage() {
 	const [searchParams] = useSearchParams();
 	const searchWord = searchParams.get("q") || "";
+	const sortBy =
+		(searchParams.get("sort") as "rarity" | "priceLow" | "priceHigh" | "cardNumberLow" | "cardNumberHigh") || "rarity";
 	const [loading, setLoading] = useState(false);
 	const [results, setResults] = useState<SearchResult[]>([]);
 	const [error, setError] = useState<string | null>(null);
@@ -91,7 +93,7 @@ function SearchPage() {
 					banner.style.opacity = "0";
 					banner.style.position = "absolute";
 					banner.style.left = "-9999px";
-					banner.style.pointerEvents = "none";
+					banner.style.pointerEvents = "rarity";
 				}
 			});
 
@@ -100,7 +102,7 @@ function SearchPage() {
 				document.body.style.backgroundImage &&
 				document.body.style.backgroundImage.includes("translate.googleapis.com")
 			) {
-				document.body.style.backgroundImage = "none";
+				document.body.style.backgroundImage = "rarity";
 			}
 
 			// Reset body position
@@ -178,8 +180,50 @@ function SearchPage() {
 		performSearch();
 	}, [searchWord]);
 
+	// Sort results before grouping
+	const sortedResults = [...results].sort((a, b) => {
+		if (sortBy === "priceLow" || sortBy === "priceHigh") {
+			const getPriceValue = (price: string | undefined): number => {
+				if (!price) return 0;
+				const numericStr = price.replace(/[^\d,]/g, "").replace(/,/g, "");
+				return parseInt(numericStr, 10) || 0;
+			};
+			const priceA = getPriceValue(a.price);
+			const priceB = getPriceValue(b.price);
+			if (sortBy === "priceLow") {
+				return priceA - priceB; // Ascending order (lowest to highest)
+			} else {
+				return priceB - priceA; // Descending order (highest to lowest)
+			}
+		} else if (sortBy === "cardNumberLow" || sortBy === "cardNumberHigh") {
+			// Extract numeric parts from card number (e.g., "OP09-118" -> [9, 118])
+			const getCardNumberParts = (cardNumber: string | undefined): number[] => {
+				if (!cardNumber || cardNumber === "-" || cardNumber === "DON") return [9999, 9999];
+				const match = cardNumber.match(/(\d+)-?(\d+)?/);
+				if (match) {
+					const part1 = parseInt(match[1], 10) || 0;
+					const part2 = match[2] ? parseInt(match[2], 10) : 0;
+					return [part1, part2];
+				}
+				return [9999, 9999];
+			};
+			const partsA = getCardNumberParts(a.cardNumber);
+			const partsB = getCardNumberParts(b.cardNumber);
+			// Compare first part, then second part
+			let comparison = 0;
+			if (partsA[0] !== partsB[0]) {
+				comparison = partsA[0] - partsB[0];
+			} else {
+				comparison = partsA[1] - partsB[1];
+			}
+			// Reverse for high to low
+			return sortBy === "cardNumberLow" ? comparison : -comparison;
+		}
+		return 0; // No sorting
+	});
+
 	// Group results by rarity
-	const groupedResults = results.reduce((acc, result) => {
+	const groupedResults = sortedResults.reduce((acc, result) => {
 		const rarity = result.rarity || "Other";
 		if (!acc[rarity]) {
 			acc[rarity] = [];
@@ -218,13 +262,13 @@ function SearchPage() {
 			{/* Search Results Header */}
 			{searchWord && (
 				<div className="mb-6">
-					<h2 className="mb-1 text-2xl font-bold text-gray-900/75">Search Results for: {searchWord}</h2>
 					{lastScraped && (
 						<span className="text-sm text-gray-900/75 notranslate">
 							Updated: {new Date(lastScraped).toLocaleDateString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })}{" "}
 							{new Date(lastScraped).toLocaleTimeString("en-MY", {
 								hour: "2-digit",
 								minute: "2-digit",
+								hour12: false,
 								timeZone: "Asia/Kuala_Lumpur",
 							})}
 						</span>
@@ -244,28 +288,36 @@ function SearchPage() {
 
 			{!loading && results.length > 0 && (
 				<div className="space-y-8">
-					{sortedGroups.map(([rarity, groupResults]) => (
-						<div key={rarity} className="space-y-4">
-							{/* Group Header */}
-							<div className="px-4 py-3 text-black rounded-lg shadow-md bg-grey top-4">
-								<h2 className="text-xl font-bold">{rarity.replace(/-/g, "–")}</h2>
-								<p className="text-sm font-medium text-black">
-									{groupResults.length} {groupResults.length === 1 ? "card" : "cards"}
-								</p>
+					{sortBy === "rarity" ? (
+						sortedGroups.map(([rarity, groupResults]) => (
+							<div key={rarity} className="space-y-4">
+								{/* Group Header */}
+								<div className="px-4 py-3 text-black rounded-lg shadow-md bg-grey top-4">
+									<h2 className="text-xl font-bold">{rarity.replace(/-/g, "–")}</h2>
+									<p className="text-sm font-medium text-black">
+										{groupResults.length} {groupResults.length === 1 ? "card" : "cards"}
+									</p>
+								</div>
+								{/* Group Cards */}
+								<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+									{groupResults.map((result, index) => (
+										<Card
+											key={`${rarity}-${index}`}
+											result={result}
+											exchangeRate={exchangeRate}
+											onImageClick={(imageUrl) => setModalImage(imageUrl)}
+										/>
+									))}
+								</div>
 							</div>
-							{/* Group Cards */}
-							<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-								{groupResults.map((result, index) => (
-									<Card
-										key={`${rarity}-${index}`}
-										result={result}
-										exchangeRate={exchangeRate}
-										onImageClick={(imageUrl) => setModalImage(imageUrl)}
-									/>
-								))}
-							</div>
+						))
+					) : (
+						<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+							{sortedResults.map((result, index) => (
+								<Card key={index} result={result} exchangeRate={exchangeRate} onImageClick={() => {}} />
+							))}
 						</div>
-					))}
+					)}
 				</div>
 			)}
 
@@ -289,7 +341,7 @@ function SearchPage() {
 						<img
 							src={modalImage}
 							alt="Card image full size"
-							className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+							className="object-contain rounded-lg shadow-2xl"
 							onClick={(e) => e.stopPropagation()}
 						/>
 					</div>

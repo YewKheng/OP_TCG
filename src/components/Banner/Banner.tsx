@@ -171,6 +171,7 @@ const Banner: React.FC<BannerProps> = ({ isLoading = false }) => {
 								{new Date(setData.lastScraped).toLocaleTimeString("en-MY", {
 									hour: "2-digit",
 									minute: "2-digit",
+									hour12: false,
 									timeZone: "Asia/Kuala_Lumpur",
 								})}
 							</p>
