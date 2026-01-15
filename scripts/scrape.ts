@@ -183,12 +183,12 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 
 				// Only process items that have a parent with class "card-product"
 				if ($el.closest(".card-product").length === 0) {
-					return; // Skip this element if not inside a card-product parent
+					return;
 				}
 
 				// Filter out items inside carousel containers (newestCardList, recommendedItemList)
 				if ($el.closest("#newestCardList, #recommendedItemList").length > 0) {
-					return; // Skip this element
+					return;
 				}
 
 				// First check parent div with class position-relative product-img
