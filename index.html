@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-color-scheme="light" data-darkreader-mode="off" data-darkreader-scheme="light">
 	<head>
 		<meta charset="UTF-8" />
 		<link rel="icon" type="image/jpeg" href="/cincai.jpeg" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="color-scheme" content="light only" />
+		<meta name="darkreader-lock" />
 		<title>Cincai OP Price Check</title>
 		<!-- Google Translate Script -->
 		<script type="text/javascript">
@@ -137,8 +139,61 @@
 		<script
 			type="text/javascript"
 			src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+		<!-- Prevent dark mode extensions -->
+		<script type="text/javascript">
+			// Prevent Dark Reader and similar extensions
+			(function () {
+				// Set attributes that dark mode extensions respect
+				document.documentElement.setAttribute("data-color-scheme", "light");
+				document.documentElement.setAttribute("data-darkreader-mode", "off");
+				document.documentElement.setAttribute("data-darkreader-scheme", "light");
+				document.body.setAttribute("data-color-scheme", "light");
+				document.body.setAttribute("data-darkreader-mode", "off");
+
+				// Prevent Dark Reader from injecting styles
+				const observer = new MutationObserver(function (mutations) {
+					mutations.forEach(function (mutation) {
+						if (mutation.type === "attributes" && mutation.attributeName === "style") {
+							const target = mutation.target;
+							if (target instanceof HTMLElement) {
+								// Remove dark reader filters
+								if (
+									(target.style.filter && target.style.filter.includes("brightness")) ||
+									(target.style.filter && target.style.filter.includes("contrast"))
+								) {
+									// Check if it's from dark reader (common patterns)
+									if (
+										target.style.filter.includes("dark") ||
+										target.getAttribute("data-darkreader-inline-bgcolor") ||
+										target.getAttribute("data-darkreader-inline-color")
+									) {
+										target.style.filter = "none";
+										target.removeAttribute("data-darkreader-inline-bgcolor");
+										target.removeAttribute("data-darkreader-inline-color");
+									}
+								}
+							}
+						}
+					});
+				});
+
+				// Observe document for style changes
+				observer.observe(document.documentElement, {
+					attributes: true,
+					attributeFilter: ["style", "data-darkreader-mode", "data-darkreader-scheme"],
+					subtree: true,
+				});
+
+				// Continuously reset dark reader attributes
+				setInterval(function () {
+					document.documentElement.setAttribute("data-darkreader-mode", "off");
+					document.documentElement.setAttribute("data-darkreader-scheme", "light");
+					document.body.setAttribute("data-darkreader-mode", "off");
+				}, 100);
+			})();
+		</script>
 	</head>
-	<body>
+	<body data-color-scheme="light" data-darkreader-mode="off">
 		<div id="root"></div>
 		<script type="module" src="/src/main.tsx"></script>
 	</body>

@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Languages } from "lucide-react";
 
 // Assets
 import cincaiLogo from "../../assets/cincai.png";
+import { Languages } from "lucide-react";
 
 const Navbar = () => {
 	const [searchWord, setSearchWord] = useState("");

@@ -1,14 +1,7 @@
 import React from "react";
 
-interface SearchResult {
-	name?: string;
-	cardNumber?: string;
-	price?: string;
-	image?: string;
-	link?: string;
-	color?: string;
-	[key: string]: unknown;
-}
+// Interface Types
+import type { SearchResult } from "../../interface/types";
 
 interface CardProps {
 	result?: SearchResult;
@@ -16,28 +9,6 @@ interface CardProps {
 	onImageClick: (imageUrl: string) => void;
 	isLoading?: boolean;
 }
-
-// Color translation mapping
-const colorTranslation: Record<string, string> = {
-	赤: "Red",
-	青: "Blue",
-	緑: "Green",
-	黄: "Yellow",
-	紫: "Purple",
-	黒: "Black",
-	赤色: "Red",
-	青色: "Blue",
-	緑色: "Green",
-	黄色: "Yellow",
-	紫色: "Purple",
-	黒色: "Black",
-};
-
-// Function to translate color
-const translateColor = (color: string | undefined): string => {
-	if (!color) return "";
-	return colorTranslation[color] || color;
-};
 
 // Function to convert JPY price to MYR
 const convertToMYR = (priceString: string | undefined, exchangeRate: number): string => {
@@ -72,9 +43,6 @@ const Card: React.FC<CardProps> = ({ result, exchangeRate, onImageClick, isLoadi
 					<div className="w-48 h-6 mb-1 bg-gray-500 rounded" />
 					<div className="w-40 h-4 bg-gray-500 rounded" />
 				</div>
-
-				{/* Skeleton Color */}
-				<div className="w-20 h-4 mb-2 bg-gray-500 rounded" />
 
 				{/* Skeleton Price */}
 				<div className="flex flex-col items-center justify-center mb-2">
@@ -124,13 +92,6 @@ const Card: React.FC<CardProps> = ({ result, exchangeRate, onImageClick, isLoadi
 					<h4 className="mb-1 text-lg font-bold text-black">{result.name}</h4>
 				</div>
 			)}
-			<div className="mb-2 space-y-1 text-sm text-white">
-				{result.color && (
-					<p className="font-medium text-black">
-						<span>Color:</span> {translateColor(result.color)}
-					</p>
-				)}
-			</div>
 			{result.price && (
 				<div className="flex flex-col items-center justify-center mb-2">
 					<p className="text-xl font-bold text-black">{convertToMYR(result.price, exchangeRate)}</p>

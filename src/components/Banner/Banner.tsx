@@ -1,3 +1,7 @@
+import React from "react";
+import { useNavigate } from "react-router-dom";
+
+// Assets
 import op01Banner from "../../assets/Set_Banner/OP01_Banner.webp";
 import op02Banner from "../../assets/Set_Banner/OP02_Banner.webp";
 import op03Banner from "../../assets/Set_Banner/OP03_Banner.webp";
@@ -42,32 +46,10 @@ import st26Banner from "../../assets/Set_Banner/ST26_Banner.webp";
 import st27Banner from "../../assets/Set_Banner/ST27_Banner.webp";
 import st28Banner from "../../assets/Set_Banner/ST28_Banner.webp";
 import st29Banner from "../../assets/Set_Banner/ST29_Banner.webp";
-
-import React from "react";
-import { useNavigate } from "react-router-dom";
 import scrapedData from "../../../data/scraped-data.json";
 
-interface SearchResult {
-	name?: string;
-	cardNumber?: string;
-	price?: string;
-	image?: string;
-	link?: string;
-	color?: string;
-	set?: string;
-	scrapedAt?: string;
-	[key: string]: unknown;
-}
-
-interface ScrapedDataEntry {
-	results: SearchResult[];
-	lastScraped: string;
-	count: number;
-}
-
-interface ScrapedData {
-	[searchWord: string]: ScrapedDataEntry;
-}
+// Interface Types
+import type { ScrapedData } from "../../interface/types";
 
 interface BannerProps {
 	isLoading?: boolean;

@@ -44,6 +44,7 @@ COMMON_SEARCH_TERMS.push("promo-st10");
 COMMON_SEARCH_TERMS.push("promo-eb10");
 
 async function scrapeAll() {
+	const startTime = Date.now();
 	console.log("🚀 Starting batch scrape...\n");
 	console.log(`Total search terms to scrape: ${COMMON_SEARCH_TERMS.length}`);
 	console.log(`Breakdown:`);
@@ -77,7 +78,7 @@ async function scrapeAll() {
 
 			// Add delay between searches to avoid rate limiting (except for the last one)
 			if (i < COMMON_SEARCH_TERMS.length - 1) {
-				const delay = 5000 + Math.random() * 3000; // 5-8 seconds between searches
+				const delay = 1000 + Math.random() * 3000; // 1-3 seconds between searches
 				console.log(`⏳ Waiting ${Math.round(delay / 1000)}s before next scrape...`);
 				await new Promise((resolve) => setTimeout(resolve, delay));
 			}
@@ -115,12 +116,19 @@ async function scrapeAll() {
 		}
 	}
 
+	const endTime = Date.now();
+	const totalTime = endTime - startTime;
+	const minutes = Math.floor(totalTime / 60000);
+	const seconds = Math.floor((totalTime % 60000) / 1000);
+	const formattedTime = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+
 	console.log("\n" + "=".repeat(50));
-	console.log("✅ Batch scrape completed!");
+	console.log("✅ Scrape completed!");
 	console.log(`Successfully scraped: ${successCount} terms`);
 	if (failCount > 0) {
 		console.log(`Failed: ${failCount} terms`);
 	}
+	console.log(`⏱️  Total time: ${formattedTime} (${totalTime}ms)`);
 	console.log("=".repeat(50));
 }
 

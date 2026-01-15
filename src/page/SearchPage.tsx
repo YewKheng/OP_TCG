@@ -1,17 +1,14 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { X } from "lucide-react";
-import Card from "../components/card/Card";
 
-interface SearchResult {
-	name?: string;
-	cardNumber?: string;
-	price?: string;
-	image?: string;
-	link?: string;
-	color?: string;
-	[key: string]: unknown;
-}
+// Assets
+import { X } from "lucide-react";
+
+// Interface Types
+import type { SearchResult } from "../interface/types";
+
+// Components
+import Card from "../components/card/Card";
 
 // Function to get JPY to MYR exchange rate (cached for 12 hours)
 async function getExchangeRate(): Promise<number> {
@@ -181,60 +178,27 @@ function SearchPage() {
 		performSearch();
 	}, [searchWord]);
 
-	// Function to extract prefix from card name (e.g., "P-SEC", "P-SR", "SEC", etc.)
-	const extractPrefix = (name: string | undefined): string => {
-		if (!name) return "Other";
-
-		// Trim leading/trailing whitespace first
-		const trimmedName = name.trim();
-
-		// First, normalize "P R", "P L", "P SR", "P SEC", etc. to "P-R", "P-L", "P-SR", "P-SEC" for consistent display
-		const normalizedName = trimmedName.replace(/^P\s+([A-Z][A-Za-z]*)/, "P-$1");
-
-		// Match English letters and dashes at the start, before Japanese characters or space
-		let prefixMatch = normalizedName.match(
-			/^([A-Za-z]+(?:-[A-Za-z]+)+)(?=\s|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/
-		);
-		if (prefixMatch && prefixMatch[1]) {
-			return prefixMatch[1];
-		}
-		// If no dash pattern, match simple letter prefix (SR, SEC, C, R, etc.)
-		prefixMatch = normalizedName.match(/^([A-Za-z]+)(?=\s|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/);
-		if (prefixMatch && prefixMatch[1]) {
-			return prefixMatch[1];
-		}
-
-		// Handle names starting with dash, for DON cards
-		if (normalizedName.startsWith("-")) {
-			return "DON";
-		}
-
-		return "Other";
-	};
-
-	// Group results by prefix
+	// Group results by rarity
 	const groupedResults = results.reduce((acc, result) => {
-		const prefix = extractPrefix(result.name);
-		if (!acc[prefix]) {
-			acc[prefix] = [];
+		const rarity = result.rarity || "Other";
+		if (!acc[rarity]) {
+			acc[rarity] = [];
 		}
-		acc[prefix].push(result);
+		acc[rarity].push(result);
 		return acc;
 	}, {} as Record<string, SearchResult[]>);
 
-	// Custom order for prefixes
-	const prefixOrder = ["P-SEC", "SEC", "SP", "P-L", "L", "P-SR", "SR", "P-R", "R", "P-UC", "UC", "C"];
+	// Custom order for rarities
+	const rarityOrder = ["P-SEC", "SEC", "P-SP", "SP", "P-SR", "SR", "P-L", "L", "R", "P-UC", "UC", "P-C", "C", "DON"];
 
-	// Sort groups by custom prefix order (with "Other" and "-" at the end)
+	// Sort groups by custom rarity order (with "Other" at the end)
 	const sortedGroups = Object.entries(groupedResults).sort(([a], [b]) => {
-		// Handle "Other" and "-" - put them at the end
+		// Handle "Other" - put it at the end
 		if (a === "Other") return 1;
 		if (b === "Other") return -1;
-		if (a === "-") return 1;
-		if (b === "-") return -1;
 
-		const indexA = prefixOrder.indexOf(a);
-		const indexB = prefixOrder.indexOf(b);
+		const indexA = rarityOrder.indexOf(a);
+		const indexB = rarityOrder.indexOf(b);
 
 		// If both are in the custom order, sort by their position
 		if (indexA !== -1 && indexB !== -1) {
@@ -280,11 +244,11 @@ function SearchPage() {
 
 			{!loading && results.length > 0 && (
 				<div className="space-y-8">
-					{sortedGroups.map(([prefix, groupResults]) => (
-						<div key={prefix} className="space-y-4">
+					{sortedGroups.map(([rarity, groupResults]) => (
+						<div key={rarity} className="space-y-4">
 							{/* Group Header */}
-							<div className="px-4 py-3 text-black rounded-lg shadow-md  bg-grey top-4">
-								<h2 className="text-xl font-bold">{prefix.replace(/-/g, "–")}</h2>
+							<div className="px-4 py-3 text-black rounded-lg shadow-md bg-grey top-4">
+								<h2 className="text-xl font-bold">{rarity.replace(/-/g, "–")}</h2>
 								<p className="text-sm font-medium text-black">
 									{groupResults.length} {groupResults.length === 1 ? "card" : "cards"}
 								</p>
@@ -293,7 +257,7 @@ function SearchPage() {
 							<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
 								{groupResults.map((result, index) => (
 									<Card
-										key={`${prefix}-${index}`}
+										key={`${rarity}-${index}`}
 										result={result}
 										exchangeRate={exchangeRate}
 										onImageClick={(imageUrl) => setModalImage(imageUrl)}

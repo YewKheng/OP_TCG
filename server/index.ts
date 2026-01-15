@@ -27,7 +27,6 @@ interface SearchResult {
 	price?: string;
 	image?: string;
 	link?: string;
-	color?: string;
 	[key: string]: unknown;
 }
 

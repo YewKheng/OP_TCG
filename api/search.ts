@@ -6,13 +6,8 @@ import * as path from "path";
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "scraped-data.json");
 
-interface ScrapedData {
-	[searchWord: string]: {
-		results: SearchResult[];
-		lastScraped: string;
-		count: number;
-	};
-}
+// Interface Types
+import type { ScrapedData, SearchResult } from "../src/interface/types";
 
 // Load cached data
 function loadCachedData(): ScrapedData {
@@ -26,19 +21,6 @@ function loadCachedData(): ScrapedData {
 		}
 	}
 	return {};
-}
-
-interface SearchResult {
-	name?: string;
-	cardNumber?: string;
-	price?: string;
-	image?: string;
-	link?: string;
-	color?: string;
-	// Keep old fields for backward compatibility
-	title?: string;
-	condition?: string;
-	[key: string]: unknown;
 }
 
 // All scraping functions removed - only cached data is served

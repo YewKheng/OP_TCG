@@ -1,3 +1,4 @@
+// Components
 import Banner from "../components/Banner/Banner";
 
 const LandingPage = () => {

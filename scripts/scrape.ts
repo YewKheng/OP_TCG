@@ -10,25 +10,8 @@ import * as path from "path";
 import axios from "axios";
 import * as cheerio from "cheerio";
 
-interface SearchResult {
-	name?: string;
-	cardNumber?: string;
-	price?: string;
-	image?: string;
-	link?: string;
-	color?: string;
-	scrapedAt?: string;
-	set?: string;
-	[key: string]: unknown;
-}
-
-interface ScrapedData {
-	[searchWord: string]: {
-		results: SearchResult[];
-		lastScraped: string;
-		count: number;
-	};
-}
+// Interface Types
+import type { ScrapedData, SearchResult } from "../src/interface/types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "scraped-data.json");
@@ -55,30 +38,6 @@ function loadData(): ScrapedData {
 // Save data
 function saveData(data: ScrapedData): void {
 	fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
-}
-
-// Function to extract name from text
-function extractNameFromText(text: string): string {
-	const englishFirstPattern =
-		/[A-Za-z]+(?:-[A-Za-z]+)?\s+[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・！!]+(?:\([^)]*\))*/;
-	let match = text.match(englishFirstPattern);
-	if (match && match[0]) {
-		return match[0];
-	}
-
-	const dashFirstPattern = /-\s+[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・！!]+(?:\([^)]*\))*/;
-	match = text.match(dashFirstPattern);
-	if (match && match[0]) {
-		return match[0];
-	}
-
-	const japaneseFirstPattern = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF・！!]+(?:\([^)]*\))*/;
-	match = text.match(japaneseFirstPattern);
-	if (match && match[0]) {
-		return match[0];
-	}
-
-	return "";
 }
 
 // Fetch URL directly (no proxy needed for server-side scraping)
@@ -119,198 +78,6 @@ async function fetchUrl(url: string): Promise<string> {
 	return response.data;
 }
 
-// Scrape individual card page
-async function scrapeCardPage(cardLink: string): Promise<Partial<SearchResult>> {
-	try {
-		const html = await fetchUrl(cardLink);
-		const $ = cheerio.load(html);
-
-		const cardData: Partial<SearchResult> = {};
-
-		// Extract image
-		const image =
-			$('img[src*="card"], img[class*="card"], img[alt*="OP"], .card-image img, .product-image img')
-				.first()
-				.attr("src") ||
-			$('img[src*="card"], img[class*="card"], img[alt*="OP"], .card-image img, .product-image img')
-				.first()
-				.attr("data-src") ||
-			$('img[src*="card"], img[class*="card"], img[alt*="OP"], .card-image img, .product-image img')
-				.first()
-				.attr("data-lazy-src");
-
-		if (image) {
-			cardData.image = image.startsWith("http") ? image : `https://yuyu-tei.jp${image}`;
-		}
-
-		// Extract price
-		const bodyText = $("body").text();
-		const allPrices = bodyText.match(/[\d,]+\s*円/g) || [];
-		const validPrices = allPrices.filter((p) => {
-			const numStr = p.replace(/[^\d,]/g, "").replace(/,/g, "");
-			const num = parseInt(numStr);
-			return num >= 10;
-		});
-
-		let price = "";
-		const priceElements = $('.price, [class*="price"], [class*="cost"], [class*="yen"]').filter((i, el) =>
-			$(el).text().includes("円")
-		);
-
-		if (priceElements.length > 0) {
-			const priceText = priceElements.first().text().trim();
-			const priceMatch = priceText.match(/[\d,]+\s*円/)?.[0];
-			if (priceMatch) {
-				const numStr = priceMatch.replace(/[^\d,]/g, "").replace(/,/g, "");
-				const num = parseInt(numStr);
-				if (num >= 10) {
-					price = priceMatch.replace(/\s+/g, "");
-				}
-			}
-		}
-
-		if (!price) {
-			const elementsWithYen = $("*").filter((i, el) => {
-				const text = $(el).text();
-				return text.includes("円") && /[\d,]+\s*円/.test(text);
-			});
-
-			for (let i = 0; i < elementsWithYen.length && !price; i++) {
-				const text = $(elementsWithYen[i]).text();
-				const priceMatch = text.match(/[\d,]+\s*円/)?.[0];
-				if (priceMatch) {
-					const numStr = priceMatch.replace(/[^\d,]/g, "").replace(/,/g, "");
-					const num = parseInt(numStr);
-					if (num >= 10) {
-						price = priceMatch.replace(/\s+/g, "");
-						break;
-					}
-				}
-			}
-		}
-
-		if (!price && validPrices.length > 0) {
-			price = validPrices[0].replace(/\s+/g, "");
-		}
-
-		if (price) {
-			const priceMatch = price.match(/[\d,]+\s*円/)?.[0];
-			if (priceMatch) {
-				cardData.price = priceMatch.replace(/\s+/g, "");
-			}
-		}
-
-		// Extract name
-		let name = "";
-		const powerDiv = $("#power.power");
-		if (powerDiv.length > 0) {
-			const h3Element = powerDiv.find("h3").first();
-			if (h3Element.length > 0) {
-				name = h3Element.text();
-			}
-		}
-
-		if (!name) {
-			const powerById = $("#power");
-			if (powerById.length > 0) {
-				const h3Element = powerById.find("h3").first();
-				if (h3Element.length > 0) {
-					name = h3Element.text();
-				}
-			}
-		}
-
-		if (!name) {
-			const powerByClass = $(".power");
-			if (powerByClass.length > 0) {
-				const h3Element = powerByClass.find("h3").first();
-				if (h3Element.length > 0) {
-					name = h3Element.text();
-				}
-			}
-		}
-
-		if (!name) {
-			name = extractNameFromText(bodyText);
-		}
-
-		if (name) {
-			cardData.name = name;
-		}
-
-		// Extract card number - prioritize span.pote element
-		let cardNumber: string | undefined =
-			$('span.pote, span[class*="pote"]').first().text().trim() ||
-			$('.code, .number, [class*="code"], [class*="number"]').first().text().trim() ||
-			$("body")
-				.text()
-				.match(/(?:OP|ST|PRB|EB|P)\d+-\d+/)?.[0] ||
-			$("body")
-				.text()
-				.match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0];
-
-		// If card number is "-", keep it as "-"
-		if (cardNumber && cardNumber.trim() === "-") {
-			cardData.cardNumber = "DON";
-		} else {
-			// Validate card number format - must start with OP, ST, PRB, EB, or P
-			if (cardNumber) {
-				cardNumber = cardNumber.trim();
-				const isValidCardNumber = /^(OP|ST|PRB|EB|P)[\d-]+/.test(cardNumber);
-				if (!isValidCardNumber) {
-					cardNumber = undefined;
-				}
-			}
-
-			// Set to "-" if no valid card number found
-			cardData.cardNumber = cardNumber || "DON";
-		}
-
-		// Extract color
-		const extractTableValue = (label: string, validationRegex?: RegExp): string => {
-			let value = "";
-			const labelElements = $("tr, td, th").filter((i, el) => {
-				const text = $(el).text().trim();
-				return text.includes(label) && text.length < 100;
-			});
-
-			labelElements.each((i, el) => {
-				if (value) return;
-				const text = $(el).text().trim();
-				const valueMatch =
-					text.match(new RegExp(`${label}[：:]\\s*([^\\s\\n]+)`)) || text.match(new RegExp(`${label}\\s+([^\\s\\n]+)`));
-				if (valueMatch && valueMatch[1]) {
-					const extractedValue = valueMatch[1].trim();
-					if (!validationRegex || validationRegex.test(extractedValue)) {
-						value = extractedValue;
-					}
-				} else {
-					const $el = $(el);
-					const $nextCell = $el.next("td, th");
-					if ($nextCell.length > 0) {
-						const nextText = $nextCell.text().trim();
-						if (nextText && (!validationRegex || validationRegex.test(nextText))) {
-							value = nextText;
-						}
-					}
-				}
-			});
-
-			return value;
-		};
-
-		const color = extractTableValue("色", /^(赤|青|緑|黄|紫|黒|赤色|青色|緑色|黄色|紫色|黒色)$/);
-		if (color) {
-			cardData.color = color;
-		}
-
-		return cardData;
-	} catch (error) {
-		console.error(`Error scraping card page ${cardLink}:`, error);
-		return {};
-	}
-}
-
 // Map search terms to custom set values
 function getSetValue(searchWord: string): string {
 	// Customize this mapping to set your desired values
@@ -323,7 +90,7 @@ function getSetValue(searchWord: string): string {
 		op06: "Wings of the Captain",
 		op07: "500 Years in the Future",
 		op08: "Two Legends",
-		op09: "Emporers in the New World",
+		op09: "Emperors in the New World",
 		op10: "Royal Blood",
 		op11: "A Fist of Divine Speed",
 		op12: "Legacy of the Master",
@@ -424,39 +191,70 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 					return; // Skip this element
 				}
 
-				const image =
-					$el.find("img").first().attr("src") ||
-					$el.find("img").first().attr("data-src") ||
-					$el.find("img").first().attr("data-lazy-src");
+				// First check parent div with class position-relative product-img
+				const productImgDiv = $el
+					.find('.position-relative.product-img, [class*="position-relative"][class*="product-img"]')
+					.first();
+				const imgElement = productImgDiv.length > 0 ? productImgDiv.find("img").first() : null;
+				const image = imgElement
+					? imgElement.attr("src") || imgElement.attr("data-src") || imgElement.attr("data-lazy-src")
+					: undefined;
 
-				const name =
-					$el.find('.name, .title, h2, h3, h4, [class*="name"], [class*="title"]').first().text().trim() ||
-					$el.find("a").first().text().trim();
-
-				let cardNumber =
-					$el.find('span.pote, span[class*="pote"]').first().text().trim() ||
-					$el.find('.code, .number, [class*="code"], [class*="number"]').first().text().trim() ||
-					$el.text().match(/(?:OP|ST|PRB|EB|P)\d+-\d+/)?.[0] ||
-					$el.text().match(/(?:OP|ST|PRB|EB|P)-\d+/)?.[0];
-
-				// If card number is "-", keep it as "-"
-				if (cardNumber && cardNumber.trim() === "-") {
-					cardNumber = "-";
-				} else {
-					// Validate card number format - must start with OP, ST, PRB, EB, or P
-					if (cardNumber) {
-						cardNumber = cardNumber.trim();
-						const isValidCardNumber = /^(OP|ST|PRB|EB|P)[\d-]+/.test(cardNumber);
-						if (!isValidCardNumber) {
-							cardNumber = undefined;
+				// Extract rarity from image alt attribute
+				let rarity: string | undefined;
+				if (imgElement) {
+					const altText = imgElement.attr("alt") || "";
+					// Check if alt text starts with "- -" (DON cards)
+					if (altText.trim().startsWith("- -")) {
+						rarity = "DON";
+					} else {
+						// First try to match P- prefixed rarities (P-SEC, P-SR, P-L, P-UC, P-C)
+						let rarityMatch = altText.match(/P-(SEC|SR|SP|L|UC|C)\b/);
+						if (rarityMatch && rarityMatch[0]) {
+							rarity = rarityMatch[0];
+						} else {
+							// Then try standalone rarities (SEC, SR, L, UC, C, R)
+							// Use word boundaries to avoid matching card number prefixes like "OP", "ST", etc.
+							rarityMatch = altText.match(/\b(SEC|SR|SP|L|UC|C|R)\b/);
+							if (rarityMatch && rarityMatch[1]) {
+								rarity = rarityMatch[1];
+							}
 						}
 					}
 				}
 
+				let name =
+					$el.find("h4.text-primary.fw-bold").first().text().trim() ||
+					$el.find('h4[class*="text-primary"][class*="fw-bold"]').first().text().trim();
+
+				// Remove "ドン!!カード" from name if it contains it
+				if (name && name.includes("ドン!!カード")) {
+					name = name.replace(/ドン!!カード/g, "").trim();
+				}
+
+				// If name includes both (パラレル) and (スーパーパラレル), keep only (スーパーパラレル)
+				if (name && name.includes("(パラレル)") && name.includes("(スーパーパラレル)")) {
+					name = name.replace(/\(パラレル\)/g, "").trim();
+				}
+
+				let cardNumber =
+					$el.find("span.d-block.border.border-dark.p-1.w-100.text-center.my-2").first().text().trim() ||
+					$el
+						.find(
+							'span[class*="d-block"][class*="border"][class*="border-dark"][class*="p-1"][class*="w-100"][class*="text-center"][class*="my-2"]'
+						)
+						.first()
+						.text()
+						.trim();
+
+				// If card number is "-", keep it as DON
+				if (cardNumber && cardNumber.trim() === "-") {
+					cardNumber = "DON";
+				}
+
 				const price =
-					$el.find('.price, [class*="price"], [class*="cost"], [class*="yen"]').first().text().trim() ||
-					$el.text().match(/[\d,]+円/)?.[0] ||
-					$el.text().match(/¥[\d,]+/)?.[0];
+					$el.find("strong.d-block.text-end").first().text().trim() ||
+					$el.find('strong[class*="d-block"][class*="text-end"]').first().text().trim();
 
 				const link = $el.find("a").first().attr("href");
 
@@ -467,6 +265,7 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 						price: price || undefined,
 						image: image ? (image.startsWith("http") ? image : `https://yuyu-tei.jp${image}`) : undefined,
 						link: link ? (link.startsWith("http") ? link : `https://yuyu-tei.jp${link}`) : undefined,
+						rarity: rarity,
 						set: setValue,
 					});
 					foundCards = true;
@@ -495,60 +294,12 @@ async function scrapeSearchTerm(searchWord: string): Promise<SearchResult[]> {
 
 		console.log(`Found ${uniqueResults.length} unique cards`);
 
-		// Scrape individual card pages
-		const BATCH_SIZE = 15;
-		const DELAY_BETWEEN_BATCHES = 1000;
-		const DELAY_BETWEEN_REQUESTS = 200;
-
-		const detailedResults: SearchResult[] = [];
-
-		for (let i = 0; i < uniqueResults.length; i += BATCH_SIZE) {
-			const batch = uniqueResults.slice(i, i + BATCH_SIZE);
-			console.log(
-				`Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(uniqueResults.length / BATCH_SIZE)}`
-			);
-
-			const batchResults = await Promise.all(
-				batch.map(async (result, index) => {
-					if (!result.link) return result;
-
-					if (index > 0) {
-						await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_REQUESTS));
-					}
-
-					try {
-						const cardData = await scrapeCardPage(result.link);
-						// Use cardData.cardNumber if it exists and is not "-", otherwise use result.cardNumber, otherwise "-"
-						const finalCardNumber =
-							cardData.cardNumber && cardData.cardNumber !== "-"
-								? cardData.cardNumber
-								: result.cardNumber && result.cardNumber !== "-"
-								? result.cardNumber
-								: "-";
-						return {
-							...result,
-							...cardData,
-							link: result.link,
-							cardNumber: finalCardNumber,
-							price: cardData.price || result.price,
-							scrapedAt: new Date().toISOString(),
-							set: setValue,
-						};
-					} catch (error) {
-						console.error(`Error scraping ${result.link}:`, error);
-						return { ...result, scrapedAt: new Date().toISOString(), set: setValue };
-					}
-				})
-			);
-
-			detailedResults.push(...batchResults);
-
-			if (i + BATCH_SIZE < uniqueResults.length) {
-				await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
-			}
-		}
-
-		const finalResults = detailedResults;
+		// Use list page data directly (no individual page scraping for speed)
+		const finalResults = uniqueResults.map((result) => ({
+			...result,
+			scrapedAt: new Date().toISOString(),
+			set: setValue,
+		}));
 
 		const cardsWithoutCardNumber = finalResults.filter((r) => !r.cardNumber || r.cardNumber.trim() === "").length;
 

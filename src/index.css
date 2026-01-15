@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Force light mode - prevent dark mode extensions */
+html,
+html[data-color-scheme],
+html[data-darkreader-mode] {
+	color-scheme: light only !important;
+	background-color: transparent !important;
+}
+
 html,
 body,
 #root {
@@ -7,11 +15,18 @@ body,
 	min-height: 100vh;
 	margin: 0;
 	padding: 0;
+	/* Force light mode colors */
+	background-color: transparent !important;
+	color: inherit !important;
 }
 
 body {
-	background: linear-gradient(to bottom right, #5da9e9, #6ed3b2);
-	background-attachment: fixed;
+	background: linear-gradient(to bottom right, #5da9e9, #6ed3b2) !important;
+	background-attachment: fixed !important;
+	/* Prevent dark mode extensions from modifying colors */
+	filter: none !important;
+	-webkit-filter: none !important;
+	background-color: transparent !important;
 }
 
 #root {
@@ -80,6 +95,29 @@ iframe[src*="te_bk.gif"] {
 	opacity: 0 !important;
 	position: absolute !important;
 	left: -9999px !important;
+}
+
+/* Prevent dark mode extensions from applying styles */
+html[data-darkreader-mode],
+html[data-darkreader-scheme],
+body[data-darkreader-mode] {
+	filter: none !important;
+	-webkit-filter: none !important;
+	background-color: transparent !important;
+}
+
+/* Override dark reader inline styles */
+[data-darkreader-inline-bgcolor],
+[data-darkreader-inline-color],
+[data-darkreader-inline-fill],
+[data-darkreader-inline-stroke] {
+	filter: none !important;
+	-webkit-filter: none !important;
+}
+
+/* Force light mode on all elements */
+* {
+	color-scheme: light only !important;
 }
 
 /* Style the translate dropdown */
