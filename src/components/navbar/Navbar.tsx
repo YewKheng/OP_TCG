@@ -14,6 +14,7 @@ const Navbar = () => {
 	const [showSortModal, setShowSortModal] = useState(false);
 	const translateDropdownRef = useRef<HTMLDivElement>(null);
 	const translateDropdownRefMobile = useRef<HTMLDivElement>(null);
+	const searchInputRef = useRef<HTMLInputElement>(null);
 	const navigate = useNavigate();
 	const location = useLocation();
 
@@ -103,6 +104,8 @@ const Navbar = () => {
 	const handleSearch = (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!searchWord.trim()) return;
+		// Blur the input to close mobile keyboard
+		searchInputRef.current?.blur();
 		// Navigate to search page with query parameter
 		navigate(`/search?q=${encodeURIComponent(searchWord.trim())}`);
 	};
@@ -190,6 +193,7 @@ const Navbar = () => {
 					{/* Search Form */}
 					<form onSubmit={handleSearch} className="flex flex-1 gap-3 sm:max-w-md">
 						<input
+							ref={searchInputRef}
 							type="text"
 							value={searchWord}
 							onChange={(e) => setSearchWord(e.target.value)}
