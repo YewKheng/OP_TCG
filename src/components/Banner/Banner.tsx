@@ -140,6 +140,7 @@ const Banner: React.FC<BannerProps> = ({ isLoading = false }) => {
 	const prbSetsRef = useRef<HTMLDivElement>(null);
 	const stSeriesRef = useRef<HTMLDivElement>(null);
 	const promoSeriesRef = useRef<HTMLDivElement>(null);
+	const tabsRef = useRef<HTMLDivElement>(null);
 
 	const opSets = sets.filter((setKey) => setKey.startsWith("op"));
 	opSets.sort((a, b) => b.localeCompare(a));
@@ -158,7 +159,28 @@ const Banner: React.FC<BannerProps> = ({ isLoading = false }) => {
 
 	const scrollToSection = (ref: React.RefObject<HTMLDivElement | null>) => {
 		if (ref.current) {
-			const offset = ref === opSeriesRef ? 400 : 160;
+			const isSmallScreen = window.innerWidth < 640; // sm breakpoint
+
+			// Calculate offset dynamically based on actual sticky elements
+			let offset = 160; // default for other sections
+
+			if (ref === opSeriesRef) {
+				// Get tabs element height
+				const tabsHeight = tabsRef.current ? tabsRef.current.getBoundingClientRect().height : 0;
+
+				const tabsStickyTop = isSmallScreen ? 500 : 300;
+
+				offset = tabsStickyTop + tabsHeight + 20;
+			}
+
+			if (ref !== opSeriesRef && isSmallScreen) {
+				const tabsHeight = tabsRef.current ? tabsRef.current.getBoundingClientRect().height : 0;
+
+				const tabsStickyTop = isSmallScreen ? 140 : 160;
+
+				offset = tabsStickyTop + tabsHeight + 20;
+			}
+
 			const elementPosition = ref.current.getBoundingClientRect().top;
 			const offsetPosition = elementPosition + window.scrollY - offset;
 
@@ -204,7 +226,9 @@ const Banner: React.FC<BannerProps> = ({ isLoading = false }) => {
 	return (
 		<div className="flex flex-col gap-10 mt-5">
 			{/* Tabs Navigation */}
-			<div className="sticky top-20 z-10 flex flex-wrap gap-2 p-4 bg-grey/75 backdrop-blur-sm rounded-lg shadow-md">
+			<div
+				ref={tabsRef}
+				className="sticky top-36 sm:top-20 z-10 flex flex-wrap gap-2 p-4 bg-grey/75 backdrop-blur-sm rounded-lg shadow-md">
 				{tabs.map((tab) => (
 					<button
 						key={tab.name}
