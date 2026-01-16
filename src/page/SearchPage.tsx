@@ -314,7 +314,12 @@ function SearchPage() {
 					) : (
 						<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
 							{sortedResults.map((result, index) => (
-								<Card key={index} result={result} exchangeRate={exchangeRate} onImageClick={() => {}} />
+								<Card
+									key={index}
+									result={result}
+									exchangeRate={exchangeRate}
+									onImageClick={(imageUrl) => setModalImage(imageUrl)}
+								/>
 							))}
 						</div>
 					)}
