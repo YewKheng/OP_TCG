@@ -1,6 +1,6 @@
 // Components
 
-import Banner from "../components/banner/Banner";
+import Banner from "../components/Banner/Banner";
 
 const LandingPage = () => {
 	return (
