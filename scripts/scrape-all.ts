@@ -78,7 +78,7 @@ async function scrapeAll() {
 
 			// Add delay between searches to avoid rate limiting (except for the last one)
 			if (i < COMMON_SEARCH_TERMS.length - 1) {
-				const delay = 1000 + Math.random() * 3000; // 1-3 seconds between searches
+				const delay = 1000 + Math.random() * 2000; // 1-2 seconds between searches
 				console.log(`⏳ Waiting ${Math.round(delay / 1000)}s before next scrape...`);
 				await new Promise((resolve) => setTimeout(resolve, delay));
 			}
