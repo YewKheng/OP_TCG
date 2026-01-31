@@ -102,7 +102,6 @@ async function scrapeAll() {
 
 			if (error instanceof Error) {
 				console.error("Error message:", error.message);
-				console.error("Error stack:", error.stack);
 			} else {
 				console.error("Unknown error:", error);
 			}
