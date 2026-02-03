@@ -133,7 +133,7 @@ function getSetValue(searchWord: string): string {
 		eb01: "Memorial Collection",
 		eb02: "Anime 25th Collection",
 		eb03: "Heroines Edition",
-		eb04: "",
+		eb04: "Egghead Crisis",
 
 		"promo-100": "Promo 100",
 		"promo-200": "Promo 200",
