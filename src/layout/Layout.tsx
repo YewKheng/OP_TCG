@@ -1,8 +1,8 @@
 import Navbar from "../components/navbar/Navbar";
 import Footer from "../components/footer/Footer";
-
+//Terry test
 const Layout = ({ children }: { children: React.ReactNode }) => {
-	return (
+	return ( 
 		<div className="max-w-6xl min-h-screen mx-auto">
 			<Navbar />
 			<div className="px-4 pb-4">{children}</div>
